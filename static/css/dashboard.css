@@ -2,6 +2,9 @@
    Dashboard layout — admin + reseller shared shell
    ============================================================ */
 
+/* Top-level layout wrapper */
+.dash-layout { display: flex; min-height: 100vh; }
+
 /* Layout */
 .dash-wrap    { display: flex; min-height: 100vh; }
 .dash-sidebar {
@@ -537,4 +540,84 @@
    Stat card alert variant
    ============================================================ */
 .stat-card-alert { border-color: #fca5a5; }
+
+/* ============================================================
+   Store link card (reseller dashboard)
+   ============================================================ */
+.store-link-card {
+  background: var(--green-light); border: 1px solid var(--green-mid);
+  border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+}
+.slc-inner { display: flex; flex-direction: column; gap: .65rem; }
+.slc-label {
+  font-size: .8rem; font-weight: 700; color: var(--green);
+  display: flex; align-items: center; gap: .4rem;
+}
+.slc-url-row { display: flex; gap: .65rem; align-items: center; }
+.slc-url {
+  flex: 1; background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: .5rem .85rem;
+  font-size: .85rem; color: var(--text-2); font-family: var(--font-mono);
+  cursor: default;
+}
+
+/* ============================================================
+   Pricing page info bar
+   ============================================================ */
+.pricing-info-bar {
+  display: flex; align-items: flex-start; gap: .5rem;
+  background: #dbeafe; border: 1px solid #bfdbfe;
+  border-radius: var(--radius-sm); padding: .85rem 1rem;
+  font-size: .85rem; color: #1e40af; margin-bottom: 1.5rem;
+}
+.pricing-info-bar strong { color: #1e3a8a; }
+
+/* ============================================================
+   Price input (pricing table)
+   ============================================================ */
+.price-input {
+  width: 120px; padding: .4rem .65rem;
+  border: 1.5px solid var(--border); border-radius: var(--radius-xs);
+  font-size: .9rem; font-weight: 600; background: var(--white); color: var(--text);
+  transition: border-color var(--transition);
+}
+.price-input:focus { outline: none; border-color: var(--green); }
+
+.profit-cell { font-weight: 700; font-size: .85rem; color: var(--green); }
+
+/* ============================================================
+   Info tip card (reseller store page)
+   ============================================================ */
+.info-tip {
+  display: flex; align-items: flex-start; gap: .65rem;
+  background: #fef3c7; border: 1px solid #fde68a;
+  border-radius: var(--radius-sm); padding: 1rem 1.25rem;
+  font-size: .85rem; color: #92400e; margin-top: 1.25rem;
+}
+.info-tip a { color: var(--green); font-weight: 700; }
+.info-tip svg { flex-shrink: 0; margin-top: .1rem; color: #d97706; }
+
+/* ============================================================
+   Section header (inside dash-content)
+   ============================================================ */
+.dash-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem; margin-top: 1.5rem;
+}
+.dash-section-header h2 { font-size: .95rem; font-weight: 800; color: var(--text); }
+
+/* ============================================================
+   Wallet balance card extras
+   ============================================================ */
+.withdraw-section { margin-bottom: 1.5rem; }
+
+/* ============================================================
+   Responsive: reseller / admin shared
+   ============================================================ */
+@media (max-width: 640px) {
+  .slc-url-row { flex-direction: column; align-items: stretch; }
+  .price-input  { width: 100%; }
+  .form-row     { flex-direction: column; }
+  .wbc-balance  { font-size: 2rem; }
+}
 

@@ -8,52 +8,91 @@
 
   <div class="dash-main">
     <div class="dash-topbar">
-      <div>
-        <h1 class="dash-page-title">My orders</h1>
-        <p class="dash-page-sub">All orders placed through your store.</p>
+      <button class="topbar-hamburger" id="sidebar-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title-wrap">
+        <span class="topbar-title">My Orders</span>
+        <span class="topbar-subtitle">All purchases through your store</span>
       </div>
       {% include "partials/topbar_actions.html" %}
     </div>
 
-    {% if orders %}
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Bundle</th>
-            <th>Network</th>
-            <th>Customer</th>
-            <th>Amount</th>
-            <th>Profit</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for o in orders %}
-          <tr>
-            <td class="td-bold">{{ o['bundle_label'] }}</td>
-            <td><span class="net-badge net-{{ o['network'] }}">{{ o['network']|upper }}</span></td>
-            <td class="td-phone">{{ o['customer_phone'] }}</td>
-            <td>GHS {{ '%.2f'|format(o['amount_pesewas'] / 100) }}</td>
-            <td class="td-profit">GHS {{ '%.2f'|format(o['profit_pesewas'] / 100) }}</td>
-            <td><span class="status-pill status-{{ o['status'] }}">{{ o['status'] }}</span></td>
-            <td class="td-date">{{ o['created_at'][:10] }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="empty-dash">
-      <div class="empty-dash-icon">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <div class="dash-content">
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="order-search" placeholder="Search bundle, phone…" />
+        </div>
+        <select class="filter-select" id="order-status-filter">
+          <option value="">All status</option>
+          <option value="dispatched">Delivered</option>
+          <option value="pending">Pending</option>
+          <option value="failed">Failed</option>
+        </select>
       </div>
-      <h3>No orders yet</h3>
-      <p>Share your store link and start earning. Orders will appear here.</p>
-      <a href="/dashboard" class="btn btn-primary">Back to dashboard</a>
+
+      {% if orders %}
+      <div class="panel">
+        <div class="panel-body no-pad">
+          <table class="data-table" id="orders-table">
+            <thead>
+              <tr>
+                <th>Bundle</th>
+                <th>Network</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Profit</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in orders %}
+              <tr data-status="{{ o['status'] }}">
+                <td class="td-bold">{{ o['bundle_label'] }}</td>
+                <td><span class="net-badge net-{{ o['network'] }}">{{ o['network']|upper }}</span></td>
+                <td>{{ o['customer_phone'] }}</td>
+                <td>GHS {{ '%.2f'|format(o['amount_pesewas'] / 100) }}</td>
+                <td class="td-bold" style="color:var(--green)">GHS {{ '%.2f'|format(o['profit_pesewas'] / 100) }}</td>
+                <td><span class="status-pill status-{{ o['status'] }}">{{ o['status'] }}</span></td>
+                <td class="td-date">{{ o['created_at'][:10] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state empty-state-lg">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <h3>No orders yet</h3>
+        <p>Share your store link and start earning. Orders will appear here.</p>
+        <a href="/dashboard" class="btn btn-primary">Back to dashboard</a>
+      </div>
+      {% endif %}
+
     </div>
-    {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const searchEl  = document.getElementById('order-search');
+  const statusSel = document.getElementById('order-status-filter');
+  function applyFilters() {
+    const q = (searchEl?.value || '').toLowerCase();
+    const s = statusSel?.value || '';
+    document.querySelectorAll('#orders-table tbody tr').forEach(tr => {
+      const text   = tr.textContent.toLowerCase();
+      const trStat = tr.dataset.status || '';
+      tr.style.display = (!q || text.includes(q)) && (!s || trStat === s) ? '' : 'none';
+    });
+  }
+  searchEl?.addEventListener('input', applyFilters);
+  statusSel?.addEventListener('change', applyFilters);
+</script>
 {% endblock %}

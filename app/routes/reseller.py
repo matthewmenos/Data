@@ -114,10 +114,15 @@ def wallet():
             "SELECT * FROM wallet_withdrawals WHERE user_id=? ORDER BY created_at DESC",
             (uid,)
         ).fetchall()
+        min_row = db.execute(
+            "SELECT value FROM app_settings WHERE key='min_withdrawal_pesewas'"
+        ).fetchone()
+        min_withdrawal = int(min_row["value"]) if min_row else 10000
 
     return render_template("reseller/wallet.html",
                            user=user, store=store,
-                           withdrawals=[dict(r) for r in rows])
+                           withdrawals=[dict(r) for r in rows],
+                           min_withdrawal=min_withdrawal)
 
 
 @reseller_bp.route("/wallet/withdraw", methods=["POST"])
