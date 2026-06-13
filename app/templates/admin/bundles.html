@@ -11,10 +11,13 @@
         <h1 class="dash-page-title">Data bundles</h1>
         <p class="dash-page-sub">Manage the master bundle catalogue that resellers and guests see.</p>
       </div>
-      <button class="btn btn-primary" id="add-bundle-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add bundle
-      </button>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" id="add-bundle-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add bundle
+        </button>
+        {% include "partials/topbar_actions.html" %}
+      </div>
     </div>
 
     {% if bundles %}

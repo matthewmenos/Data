@@ -11,7 +11,10 @@
         <h1 class="dash-page-title">Set your prices</h1>
         <p class="dash-page-sub">Your price must be at or above the base price. Your profit is the difference.</p>
       </div>
-      <button type="submit" form="pricing-form" class="btn btn-primary" id="save-btn">Save all prices</button>
+      <div class="topbar-actions">
+        <button type="submit" form="pricing-form" class="btn btn-primary" id="save-btn">Save all prices</button>
+        {% include "partials/topbar_actions.html" %}
+      </div>
     </div>
 
     <div class="pricing-explainer">

@@ -16,10 +16,10 @@ def _headers(secret_key: str) -> dict:
 def initialize_transaction(secret_key: str, email: str, amount_pesewas: int,
                             reference: str, callback_url: str,
                             metadata: dict = None) -> dict:
-    """Create a Paystack transaction. amount in pesewas → converted to kobo (x10)."""
+    """Create a Paystack transaction. amount in pesewas (GHS subunit, 100 pesewas = GHS 1)."""
     payload = {
         "email": email,
-        "amount": amount_pesewas * 10,  # pesewas → GHS subunit (kobo equivalent for GHS)
+        "amount": amount_pesewas,  # Paystack GHS amounts are in pesewas
         "reference": reference,
         "callback_url": callback_url,
         "currency": "GHS",
@@ -48,7 +48,7 @@ def initiate_transfer(secret_key: str, amount_pesewas: int, recipient_code: str,
                       reference: str, reason: str = "Wallet withdrawal") -> dict:
     payload = {
         "source": "balance",
-        "amount": amount_pesewas * 10,
+        "amount": amount_pesewas,
         "recipient": recipient_code,
         "reference": reference,
         "reason": reason,
