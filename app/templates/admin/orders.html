@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Orders — Admin{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/dashboard.css" />{% endblock %}
 
 {% block content %}
 <div class="dash-layout">
@@ -7,48 +8,138 @@
 
   <div class="dash-main">
     <div class="dash-topbar">
-      <div>
-        <h1 class="dash-page-title">All orders</h1>
-        <p class="dash-page-sub">Every bundle purchase across the platform.</p>
+      <button class="topbar-hamburger" id="sidebar-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title-wrap">
+        <span class="topbar-title">All Orders</span>
+        <span class="topbar-subtitle">{{ counts.total }} total &middot; {{ counts.dispatched }} delivered</span>
       </div>
       {% include "partials/topbar_actions.html" %}
     </div>
 
-    {% if orders %}
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Reference</th>
-            <th>Network</th>
-            <th>Customer</th>
-            <th>Amount</th>
-            <th>Profit paid</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for o in orders %}
-          <tr>
-            <td><code class="ref-code">{{ o['paystack_reference'] or '—' }}</code></td>
-            <td><span class="net-badge net-{{ o['network'] }}">{{ o['network']|upper }}</span></td>
-            <td class="td-phone">{{ o['customer_phone'] }}</td>
-            <td>GHS {{ '%.2f'|format(o['amount_pesewas'] / 100) }}</td>
-            <td class="td-profit">GHS {{ '%.2f'|format(o['profit_pesewas'] / 100) }}</td>
-            <td><span class="status-pill status-{{ o['status'] }}">{{ o['status'] }}</span></td>
-            <td class="td-date">{{ o['created_at'][:10] }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="dash-content">
+
+      <!-- Count pills -->
+      <div class="count-pills">
+        <div class="count-pill">
+          <span class="count-pill-num">{{ counts.total }}</span>
+          <span class="count-pill-label">All</span>
+        </div>
+        <div class="count-pill count-pill-green">
+          <span class="count-pill-num">{{ counts.dispatched }}</span>
+          <span class="count-pill-label">Delivered</span>
+        </div>
+        <div class="count-pill count-pill-yellow">
+          <span class="count-pill-num">{{ counts.pending }}</span>
+          <span class="count-pill-label">Pending</span>
+        </div>
+        <div class="count-pill count-pill-red">
+          <span class="count-pill-num">{{ counts.failed }}</span>
+          <span class="count-pill-label">Failed</span>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="order-search" placeholder="Search phone, reference, store…" />
+        </div>
+        <select class="filter-select" id="order-net-filter">
+          <option value="">All networks</option>
+          <option value="mtn">MTN</option>
+          <option value="telecel">Telecel</option>
+          <option value="airteltigo">AirtelTigo</option>
+        </select>
+        <select class="filter-select" id="order-status-filter">
+          <option value="">All status</option>
+          <option value="dispatched">Delivered</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
+
+      {% if orders %}
+      <div class="panel">
+        <div class="panel-body no-pad">
+          <table class="data-table" id="orders-table">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Customer</th>
+                <th>Network</th>
+                <th>Bundle</th>
+                <th>Store</th>
+                <th>Amount</th>
+                <th>Profit</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in orders %}
+              <tr data-net="{{ o['network'] }}" data-status="{{ o['status'] }}">
+                <td><code class="ref-code">{{ o['paystack_reference'] or '—' }}</code></td>
+                <td>
+                  <div class="td-bold">{{ o['customer_phone'] }}</div>
+                  <div class="td-muted td-sm">{{ o['customer_email'] }}</div>
+                </td>
+                <td><span class="net-badge net-{{ o['network'] }}">{{ o['network']|upper }}</span></td>
+                <td>
+                  <div class="td-sm">{{ o['bundle_label'] or '—' }}</div>
+                  <div class="td-muted td-sm">{% if o['volume_mb'] >= 1000 %}{{ '%.1f'|format(o['volume_mb']/1000) }}GB{% else %}{{ o['volume_mb'] }}MB{% endif %}</div>
+                </td>
+                <td class="td-sm td-muted">{{ o['store_name'] or 'Direct' }}</td>
+                <td class="td-bold">GHS {{ '%.2f'|format(o['amount_pesewas'] / 100) }}</td>
+                <td class="td-muted">GHS {{ '%.2f'|format(o['profit_pesewas'] / 100) }}</td>
+                <td><span class="status-pill status-{{ o['status'] }}">{{ o['status'] }}</span></td>
+                <td class="td-date">{{ o['created_at'][:10] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state empty-state-lg">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <h3>No orders yet</h3>
+        <p>Orders will appear here as customers make purchases.</p>
+      </div>
+      {% endif %}
+
     </div>
-    {% else %}
-    <div class="empty-dash">
-      <h3>No orders yet</h3>
-      <p>Orders will appear here after customers make purchases.</p>
-    </div>
-    {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+    document.querySelector('.dash-sidebar').classList.toggle('open');
+  });
+
+  const searchEl    = document.getElementById('order-search');
+  const netSel      = document.getElementById('order-net-filter');
+  const statusSel   = document.getElementById('order-status-filter');
+  function applyFilters() {
+    const q = (searchEl?.value || '').toLowerCase();
+    const n = netSel?.value || '';
+    const s = statusSel?.value || '';
+    document.querySelectorAll('#orders-table tbody tr').forEach(tr => {
+      const text   = tr.textContent.toLowerCase();
+      const trNet  = tr.dataset.net || '';
+      const trStat = tr.dataset.status || '';
+      tr.style.display =
+        (!q || text.includes(q)) &&
+        (!n || trNet === n) &&
+        (!s || trStat === s) ? '' : 'none';
+    });
+  }
+  searchEl?.addEventListener('input', applyFilters);
+  netSel?.addEventListener('change', applyFilters);
+  statusSel?.addEventListener('change', applyFilters);
+</script>
 {% endblock %}

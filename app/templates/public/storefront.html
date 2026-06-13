@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ store['store_name'] }} — Mac Data Hub{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/storefront.css" />{% endblock %}
 
 {% block content %}
 
@@ -56,11 +57,14 @@
           <span class="bc-validity">{{ p['validity_days'] }} day{{ 's' if p['validity_days'] != 1 }}</span>
         </div>
         <div class="bc-body">
-          <div class="bc-volume">{{ p['label'] }}</div>
+          <div class="bc-volume">
+            {% if p['volume_mb'] >= 1000 %}{{ '%.0f'|format(p['volume_mb'] / 1000) }}GB{% else %}{{ p['volume_mb'] }}MB{% endif %}
+          </div>
           <div class="bc-price">GHS {{ '%.2f'|format(p['price_pesewas'] / 100) }}</div>
-          <a href="/checkout?bundle_id={{ p['bundle_id'] }}&store_id={{ store['id'] }}" class="btn btn-primary btn-block">
+          <button class="btn btn-primary btn-block"
+                  onclick="openOrderModal('{{ p['network'] }}', '{{ p['network']|upper }} Data', '{{ p['bundle_id'] }}')">
             Buy Now
-          </a>
+          </button>
         </div>
       </div>
       {% endfor %}
@@ -76,6 +80,81 @@
     {% endif %}
   </div>
 </section>
+
+<!-- ── Order Modal ── -->
+<div class="modal hidden" id="order-modal" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+  <div class="modal-backdrop" id="order-modal-backdrop"></div>
+  <div class="order-modal-card">
+
+    <div class="order-modal-header">
+      <h2 class="order-modal-title" id="order-modal-title">Data</h2>
+      <button class="order-modal-close" id="order-modal-close" aria-label="Close">&times;</button>
+    </div>
+
+    <p class="order-modal-sub">Fill out the details below</p>
+
+    <form id="order-form" novalidate>
+      <input type="hidden" id="om-store-id" value="{{ store['id'] }}" />
+
+      <div class="field">
+        <label for="om-phone">Beneficiary Number</label>
+        <input type="tel" id="om-phone" name="phone"
+               placeholder="e.g. 054xxxxxxx"
+               maxlength="10" autocomplete="tel" required />
+      </div>
+
+      <div class="field">
+        <label for="om-email">Email (for receipt)</label>
+        <input type="email" id="om-email" name="email"
+               placeholder="you@example.com"
+               autocomplete="email" required />
+      </div>
+
+      <div class="field">
+        <label for="om-package">Select Data Package</label>
+        <div class="om-select-wrap">
+          <select id="om-package" name="bundle_id" required>
+            <option value="">Select package</option>
+          </select>
+          <svg class="om-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+
+      <div id="om-price-display" class="om-price-display hidden">
+        Total: <strong id="om-price-value"></strong>
+      </div>
+
+      <div id="om-error" class="form-error hidden"></div>
+
+      <button type="submit" class="btn om-pay-btn" id="om-pay-btn">
+        Proceed to Payment
+      </button>
+
+      <div class="secure-note" style="margin-top:.9rem;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Secured by Paystack &mdash; mobile money &amp; card accepted
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<!-- Store bundle data for JS -->
+<script>
+window.BUNDLES = [
+  {% for p in pricing %}
+  {
+    id: "{{ p['bundle_id'] }}",
+    network: "{{ p['network'] }}",
+    label: "{{ p['label'] }}",
+    volume_mb: {{ p['volume_mb'] }},
+    validity_days: {{ p['validity_days'] }},
+    price_pesewas: {{ p['price_pesewas'] }}
+  }{{ ',' if not loop.last }}
+  {% endfor %}
+];
+window.PAYSTACK_PUBLIC_KEY = "{{ config['PAYSTACK_PUBLIC_KEY'] }}";
+</script>
 
 {% endblock %}
 

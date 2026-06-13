@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Resellers — Admin{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/dashboard.css" />{% endblock %}
 
 {% block content %}
 <div class="dash-layout">
@@ -7,69 +8,132 @@
 
   <div class="dash-main">
     <div class="dash-topbar">
-      <div>
-        <h1 class="dash-page-title">Resellers</h1>
-        <p class="dash-page-sub">All registered reseller accounts.</p>
+      <button class="topbar-hamburger" id="sidebar-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title-wrap">
+        <span class="topbar-title">Resellers</span>
+        <span class="topbar-subtitle">{{ counts.total }} total &middot; {{ counts.active }} active</span>
       </div>
       {% include "partials/topbar_actions.html" %}
     </div>
 
-    {% if resellers %}
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Store</th>
-            <th>Wallet</th>
-            <th>Status</th>
-            <th>Joined</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in resellers %}
-          <tr>
-            <td class="td-bold">{{ r['full_name'] }}</td>
-            <td class="td-muted">{{ r['email'] }}</td>
-            <td>
-              {% if r['slug'] %}
-              <a href="/s/{{ r['slug'] }}" target="_blank" class="table-link">
-                /s/{{ r['slug'] }}
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              </a>
-              {% else %}—{% endif %}
-            </td>
-            <td>GHS {{ '%.2f'|format(r['wallet_pesewas'] / 100) }}</td>
-            <td>
-              <span class="status-pill {{ 'status-dispatched' if r['is_active'] else 'status-failed' }}">
-                {{ 'Active' if r['is_active'] else 'Inactive' }}
-              </span>
-            </td>
-            <td class="td-date">{{ r['created_at'][:10] }}</td>
-            <td>
-              <button class="btn btn-ghost btn-sm toggle-btn"
-                      data-id="{{ r['id'] }}"
-                      data-active="{{ r['is_active'] }}">
-                {{ 'Deactivate' if r['is_active'] else 'Activate' }}
-              </button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="dash-content">
+
+      <!-- Summary pills -->
+      <div class="count-pills">
+        <div class="count-pill">
+          <span class="count-pill-num">{{ counts.total }}</span>
+          <span class="count-pill-label">Total</span>
+        </div>
+        <div class="count-pill count-pill-green">
+          <span class="count-pill-num">{{ counts.active }}</span>
+          <span class="count-pill-label">Active</span>
+        </div>
+        <div class="count-pill count-pill-red">
+          <span class="count-pill-num">{{ counts.inactive }}</span>
+          <span class="count-pill-label">Inactive</span>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="reseller-search" placeholder="Search name, email or store…" />
+        </div>
+        <select class="filter-select" id="reseller-status-filter">
+          <option value="">All status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      {% if resellers %}
+      <div class="panel">
+        <div class="panel-body no-pad">
+          <table class="data-table" id="resellers-table">
+            <thead>
+              <tr>
+                <th>Reseller</th>
+                <th>Store</th>
+                <th>Wallet</th>
+                <th>Orders</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in resellers %}
+              <tr data-status="{{ 'active' if r['is_active'] else 'inactive' }}">
+                <td>
+                  <div class="td-bold">{{ r['full_name'] }}</div>
+                  <div class="td-muted td-sm">{{ r['email'] }}</div>
+                  <div class="td-muted td-sm">{{ r['phone'] }}</div>
+                </td>
+                <td>
+                  {% if r['slug'] %}
+                  <div class="td-bold">{{ r['store_name'] }}</div>
+                  <a href="/s/{{ r['slug'] }}" target="_blank" class="table-link td-sm">
+                    /s/{{ r['slug'] }}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                  {% else %}<span class="td-muted">No store yet</span>{% endif %}
+                </td>
+                <td class="td-bold">GHS {{ '%.2f'|format(r['wallet_pesewas'] / 100) }}</td>
+                <td class="td-bold">{{ r['order_count'] }}</td>
+                <td>
+                  <span class="status-pill {{ 'status-dispatched' if r['is_active'] else 'status-failed' }}">
+                    {{ 'Active' if r['is_active'] else 'Inactive' }}
+                  </span>
+                </td>
+                <td class="td-date">{{ r['created_at'][:10] }}</td>
+                <td>
+                  <button class="btn btn-ghost btn-sm toggle-btn"
+                          data-id="{{ r['id'] }}"
+                          data-active="{{ r['is_active'] }}">
+                    {{ 'Deactivate' if r['is_active'] else 'Activate' }}
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state empty-state-lg">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <h3>No resellers yet</h3>
+        <p>Resellers appear here after registering and paying the fee.</p>
+      </div>
+      {% endif %}
+
     </div>
-    {% else %}
-    <div class="empty-dash">
-      <h3>No resellers yet</h3>
-      <p>Resellers will appear here after registering and paying the fee.</p>
-    </div>
-    {% endif %}
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="/static/js/admin_resellers.js"></script>
+<script>
+  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+    document.querySelector('.dash-sidebar').classList.toggle('open');
+  });
+
+  const searchEl  = document.getElementById('reseller-search');
+  const statusSel = document.getElementById('reseller-status-filter');
+  function applyFilters() {
+    const q = (searchEl?.value || '').toLowerCase();
+    const s = statusSel?.value || '';
+    document.querySelectorAll('#resellers-table tbody tr').forEach(tr => {
+      const text   = tr.textContent.toLowerCase();
+      const trStat = tr.dataset.status || '';
+      tr.style.display = (!q || text.includes(q)) && (!s || trStat === s) ? '' : 'none';
+    });
+  }
+  searchEl?.addEventListener('input', applyFilters);
+  statusSel?.addEventListener('change', applyFilters);
+</script>
 {% endblock %}

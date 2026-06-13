@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Settings — Admin{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/dashboard.css" />{% endblock %}
 
 {% block content %}
 <div class="dash-layout">
@@ -7,58 +8,145 @@
 
   <div class="dash-main">
     <div class="dash-topbar">
-      <div>
-        <h1 class="dash-page-title">Platform settings</h1>
-        <p class="dash-page-sub">Control fees, platform name, and other global options.</p>
+      <button class="topbar-hamburger" id="sidebar-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title-wrap">
+        <span class="topbar-title">Platform Settings</span>
+        <span class="topbar-subtitle">Fees, API keys and global config</span>
       </div>
       {% include "partials/topbar_actions.html" %}
     </div>
 
-    <div class="settings-card">
+    <div class="dash-content">
       <form id="settings-form" novalidate>
 
-        <div class="settings-group">
-          <div class="settings-group-title">General</div>
-          <div class="field">
-            <label for="platform_name">Platform name</label>
-            <input type="text" id="platform_name" name="platform_name"
-                   value="{{ settings.get('platform_name', 'Mac Data Hub') }}" required />
-            <span class="field-hint">Shown in the browser tab and footer.</span>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-group-title">Reseller fees</div>
-          <div class="field-row">
+        <!-- General -->
+        <div class="settings-section">
+          <h2>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:.4rem;vertical-align:middle"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            General
+          </h2>
+          <div class="settings-grid">
             <div class="field">
-              <label for="reseller_registration_fee_pesewas">Registration fee (pesewas)</label>
-              <input type="number" id="reseller_registration_fee_pesewas"
-                     name="reseller_registration_fee_pesewas"
-                     value="{{ settings.get('reseller_registration_fee_pesewas', '5000') }}"
-                     min="0" required />
-              <span class="field-hint">
-                Currently GHS {{ '%.2f'|format(settings.get('reseller_registration_fee_pesewas', '5000')|int / 100) }}
-              </span>
+              <label for="platform_name">Platform name</label>
+              <input type="text" id="platform_name" name="platform_name"
+                     value="{{ settings.get('platform_name', 'Mac Data Hub') }}" required />
+              <span class="field-hint">Shown in the browser tab and footer.</span>
             </div>
             <div class="field">
-              <label for="min_withdrawal_pesewas">Min. withdrawal (pesewas)</label>
-              <input type="number" id="min_withdrawal_pesewas"
-                     name="min_withdrawal_pesewas"
-                     value="{{ settings.get('min_withdrawal_pesewas', '10000') }}"
-                     min="0" required />
-              <span class="field-hint">
-                Currently GHS {{ '%.2f'|format(settings.get('min_withdrawal_pesewas', '10000')|int / 100) }}
-              </span>
+              <label for="support_email">Support email</label>
+              <input type="email" id="support_email" name="support_email"
+                     value="{{ settings.get('support_email', '') }}" placeholder="support@yourdomain.com" />
+              <span class="field-hint">Shown on receipts and error pages.</span>
+            </div>
+            <div class="field">
+              <label for="support_phone">Support phone</label>
+              <input type="text" id="support_phone" name="support_phone"
+                     value="{{ settings.get('support_phone', '') }}" placeholder="0XX XXX XXXX" />
             </div>
           </div>
         </div>
 
+        <!-- Reseller fees -->
+        <div class="settings-section">
+          <h2>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:.4rem;vertical-align:middle"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Reseller fees
+          </h2>
+          <div class="settings-grid">
+            <div class="field">
+              <label for="reg-fee-ghs">Registration fee (GHS)</label>
+              <div class="input-with-icon">
+                <span class="input-icon input-icon-text">GHS</span>
+                <input type="number" id="reg-fee-ghs" name="reg_fee_ghs"
+                       value="{{ '%.2f'|format(settings.get('reseller_registration_fee_pesewas', '5000')|int / 100) }}"
+                       min="0" step="0.01" required />
+              </div>
+              <span class="field-hint">One-time fee when a reseller registers.</span>
+            </div>
+            <div class="field">
+              <label for="min-wd-ghs">Minimum withdrawal (GHS)</label>
+              <div class="input-with-icon">
+                <span class="input-icon input-icon-text">GHS</span>
+                <input type="number" id="min-wd-ghs" name="min_wd_ghs"
+                       value="{{ '%.2f'|format(settings.get('min_withdrawal_pesewas', '10000')|int / 100) }}"
+                       min="0" step="0.01" required />
+              </div>
+              <span class="field-hint">Minimum amount a reseller can withdraw at once.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paystack -->
+        <div class="settings-section">
+          <h2>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:.4rem;vertical-align:middle"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            Paystack
+          </h2>
+          <div class="settings-grid">
+            <div class="field">
+              <label for="paystack_secret_key">Secret key</label>
+              <div class="input-with-icon">
+                <span class="input-icon">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <input type="password" id="paystack_secret_key" name="paystack_secret_key"
+                       value="{{ settings.get('paystack_secret_key', '') }}"
+                       placeholder="sk_live_…" autocomplete="new-password" />
+              </div>
+              <span class="field-hint">Keep this secret. Never share or commit it.</span>
+            </div>
+            <div class="field">
+              <label for="paystack_public_key">Public key</label>
+              <input type="text" id="paystack_public_key" name="paystack_public_key"
+                     value="{{ settings.get('paystack_public_key', '') }}"
+                     placeholder="pk_live_…" />
+              <span class="field-hint">Used in the frontend for Paystack Popup.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GigzHub -->
+        <div class="settings-section">
+          <h2>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:.4rem;vertical-align:middle"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            GigzHub API
+          </h2>
+          <div class="settings-grid">
+            <div class="field">
+              <label for="gigzhub_api_key">GigzHub API key</label>
+              <div class="input-with-icon">
+                <span class="input-icon">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <input type="password" id="gigzhub_api_key" name="gigzhub_api_key"
+                       value="{{ settings.get('gigzhub_api_key', '') }}"
+                       placeholder="Your GigzHub API key" autocomplete="new-password" />
+              </div>
+              <span class="field-hint">Used to dispatch data bundles via GigzHub.net.</span>
+            </div>
+            <div class="field">
+              <label for="gigzhub_base_url">GigzHub base URL</label>
+              <input type="text" id="gigzhub_base_url" name="gigzhub_base_url"
+                     value="{{ settings.get('gigzhub_base_url', 'https://gigzhub.net/api') }}"
+                     placeholder="https://gigzhub.net/api" />
+              <span class="field-hint">Only change if GigzHub updates their API endpoint.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feedback -->
         <div id="settings-error" class="form-error hidden"></div>
-        <div id="settings-success" class="form-success hidden"></div>
+        <div id="settings-success" class="form-success hidden">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Settings saved successfully.
+        </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary btn-lg">Save settings</button>
+          <button type="submit" class="btn btn-primary btn-lg" id="save-settings-btn">Save all settings</button>
         </div>
+
       </form>
     </div>
   </div>
@@ -67,4 +155,9 @@
 
 {% block scripts %}
 <script src="/static/js/admin_settings.js"></script>
+<script>
+  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+    document.querySelector('.dash-sidebar').classList.toggle('open');
+  });
+</script>
 {% endblock %}

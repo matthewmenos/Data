@@ -271,6 +271,63 @@ ul { list-style: none; }
 }
 
 /* ============================================================
+   BUY PAGE HEADER
+   ============================================================ */
+.buy-page-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 1.25rem 0 1rem;
+}
+.buy-page-title {
+  font-size: 1.35rem; font-weight: 900;
+  display: flex; align-items: center; gap: .65rem; color: var(--text);
+}
+.buy-page-title svg { color: var(--green); flex-shrink: 0; }
+
+/* ============================================================
+   NETWORK SELECTOR CARDS
+   ============================================================ */
+.network-section { padding: 1.5rem 0; background: var(--bg); }
+.network-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.net-card {
+  border-radius: var(--radius);
+  padding: 1.5rem 1rem 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: .65rem;
+  text-decoration: none; cursor: pointer; width: 100%; border: none;
+  transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
+  box-shadow: var(--shadow);
+}
+.net-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); text-decoration: none; filter: brightness(1.07); }
+.net-card:active { transform: scale(.97); }
+
+.net-card-mtn        { background: #f5a700; }
+.net-card-airteltigo { background: #0061af; }
+.net-card-telecel    { background: #CE1126; }
+.net-card-bulk       { background: #6d28d9; }
+
+.net-card-icon {
+  width: 52px; height: 52px; stroke: rgba(255,255,255,.9); flex-shrink: 0;
+}
+.net-card-name {
+  font-size: 1.05rem; font-weight: 900; color: #fff;
+  text-align: center; line-height: 1.2;
+}
+.net-card-btn {
+  margin-top: .25rem;
+  background: rgba(255,255,255,.22);
+  border: 1.5px solid rgba(255,255,255,.35);
+  border-radius: 99px;
+  color: #fff; font-size: .78rem; font-weight: 800;
+  padding: .35rem 1.1rem; letter-spacing: .06em;
+  transition: background var(--transition);
+}
+.net-card:hover .net-card-btn { background: rgba(255,255,255,.35); }
+
+/* ============================================================
    HERO (Homepage)
    ============================================================ */
 .hero {
@@ -849,6 +906,77 @@ ul { list-style: none; }
 .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; margin-top: .5rem; }
 
 /* ============================================================
+   ORDER MODAL
+   ============================================================ */
+.order-modal-card {
+  position: relative; z-index: 1;
+  background: var(--white); border-radius: 24px;
+  padding: 1.75rem 1.5rem 1.5rem;
+  width: calc(100% - 2rem); max-width: 420px;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn .2s cubic-bezier(.34,1.56,.64,1);
+}
+.order-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .2rem;
+}
+.order-modal-title {
+  font-size: 1.4rem; font-weight: 900; color: var(--text); line-height: 1.2;
+}
+.order-modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg-2); border: none;
+  font-size: 1.25rem; color: var(--text-muted); line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background var(--transition), color var(--transition);
+}
+.order-modal-close:hover { background: var(--border); color: var(--text); }
+.order-modal-sub {
+  font-size: .88rem; color: var(--text-muted); margin-bottom: 1.25rem;
+}
+
+/* Tighter field spacing inside modal */
+.order-modal-card .field { margin-bottom: .9rem; }
+
+/* Package select */
+.om-select-wrap { position: relative; }
+.om-select-wrap select {
+  width: 100%; appearance: none; -webkit-appearance: none;
+  padding: .7rem 2.5rem .7rem 1rem;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: .95rem; font-weight: 500; color: var(--text);
+  background: var(--white); cursor: pointer;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.om-select-wrap select:focus {
+  outline: none; border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(0,107,63,.1);
+}
+.om-select-arrow {
+  position: absolute; right: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); pointer-events: none;
+}
+
+/* Price display */
+.om-price-display {
+  background: var(--green-light); border-radius: var(--radius-sm);
+  padding: .55rem .9rem; font-size: .88rem; color: var(--green);
+  margin-bottom: .75rem; text-align: center;
+}
+.om-price-display strong { font-size: 1rem; }
+
+/* Pay button */
+.om-pay-btn {
+  width: 100%; background: #1a56db; color: #fff;
+  border-radius: var(--radius-sm); padding: .85rem 1rem;
+  font-size: 1rem; font-weight: 800; margin-top: .4rem;
+  transition: background var(--transition), box-shadow var(--transition);
+  letter-spacing: .02em;
+}
+.om-pay-btn:hover:not(:disabled) { background: #1447c0; box-shadow: 0 4px 14px rgba(26,86,219,.35); }
+.om-pay-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* ============================================================
    DARK MODE TOGGLE
    ============================================================ */
 .theme-toggle {
@@ -980,6 +1108,24 @@ ul { list-style: none; }
 }
 
 @media (max-width: 640px) {
+  .network-grid { gap: .75rem; }
+  .net-card { padding: 1.25rem .75rem .85rem; }
+  .net-card-icon { width: 44px; height: 44px; }
+  .net-card-name { font-size: .95rem; }
+
+  /* Modal slides up from bottom on mobile */
+  .modal { align-items: flex-end; }
+  .order-modal-card {
+    width: 100%; max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    padding: 1.5rem 1.25rem 2rem;
+    animation: modalSlideUp .25s cubic-bezier(.34,1.2,.64,1);
+  }
+  @keyframes modalSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
   .field-row { grid-template-columns: 1fr; }
   .nav-links { display: none; flex-direction: column; position: fixed;
     top: 62px; left: 0; right: 0; background: var(--white);

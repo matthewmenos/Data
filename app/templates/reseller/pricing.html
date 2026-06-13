@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Set Prices — Mac Data Hub{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/dashboard.css" />{% endblock %}
 
 {% block content %}
 <div class="dash-layout">
@@ -47,7 +48,10 @@
                 {% for b in net_bundles %}
                 {% set cur = existing.get(b['id'], b['base_price_pesewas']) %}
                 <tr>
-                  <td class="td-bold">{{ b['label'] }}</td>
+                  <td class="td-bold">
+                    {% if b['volume_mb'] >= 1000 %}{{ '%.0f'|format(b['volume_mb'] / 1000) }}GB{% else %}{{ b['volume_mb'] }}MB{% endif %}
+                    <span class="td-sm td-muted"> — {{ b['label'] }}</span>
+                  </td>
                   <td>{{ b['validity_days'] }}d</td>
                   <td class="td-muted">GHS {{ '%.2f'|format(b['base_price_pesewas'] / 100) }}</td>
                   <td>

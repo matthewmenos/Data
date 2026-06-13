@@ -21,21 +21,62 @@ def admin_required(f):
 def dashboard():
     config = current_app.config
     with global_db(config) as db:
-        total_orders = db.execute("SELECT COUNT(*) as c FROM orders").fetchone()["c"]
-        total_revenue = db.execute(
+        total_orders   = db.execute("SELECT COUNT(*) as c FROM orders").fetchone()["c"]
+        total_revenue  = db.execute(
             "SELECT COALESCE(SUM(amount_pesewas),0) as t FROM orders WHERE status='dispatched'"
         ).fetchone()["t"]
         total_resellers = db.execute(
             "SELECT COUNT(*) as c FROM users WHERE role='reseller' AND is_active=1"
         ).fetchone()["c"]
-        recent_orders = db.execute(
-            "SELECT * FROM orders ORDER BY created_at DESC LIMIT 10"
+        pending_orders = db.execute(
+            "SELECT COUNT(*) as c FROM orders WHERE status='pending'"
+        ).fetchone()["c"]
+        today_revenue  = db.execute(
+            "SELECT COALESCE(SUM(amount_pesewas),0) as t FROM orders "
+            "WHERE status='dispatched' AND date(created_at)=date('now')"
+        ).fetchone()["t"]
+        today_orders   = db.execute(
+            "SELECT COUNT(*) as c FROM orders WHERE date(created_at)=date('now')"
+        ).fetchone()["c"]
+        pending_withdrawals = db.execute(
+            "SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='pending'"
+        ).fetchone()["c"]
+        total_bundles  = db.execute(
+            "SELECT COUNT(*) as c FROM data_bundles WHERE is_active=1"
+        ).fetchone()["c"]
+        recent_orders  = db.execute(
+            """SELECT o.*, b.label as bundle_label, s.store_name
+               FROM orders o
+               LEFT JOIN data_bundles b ON b.id = o.bundle_id
+               LEFT JOIN stores s ON s.id = o.store_id
+               ORDER BY o.created_at DESC LIMIT 8"""
         ).fetchall()
+        recent_withdrawals = db.execute(
+            """SELECT w.*, u.full_name, u.email
+               FROM wallet_withdrawals w JOIN users u ON u.id = w.user_id
+               WHERE w.status='pending'
+               ORDER BY w.created_at ASC LIMIT 5"""
+        ).fetchall()
+        # Revenue by network (dispatched)
+        net_revenue = db.execute(
+            """SELECT network, COUNT(*) as cnt,
+               COALESCE(SUM(amount_pesewas),0) as rev
+               FROM orders WHERE status='dispatched'
+               GROUP BY network"""
+        ).fetchall()
+
     return render_template("admin/dashboard.html",
                            total_orders=total_orders,
                            total_revenue=total_revenue,
+                           today_revenue=today_revenue,
+                           today_orders=today_orders,
                            total_resellers=total_resellers,
-                           recent_orders=recent_orders)
+                           pending_orders=pending_orders,
+                           pending_withdrawals=pending_withdrawals,
+                           total_bundles=total_bundles,
+                           recent_orders=recent_orders,
+                           recent_withdrawals=recent_withdrawals,
+                           net_revenue=net_revenue)
 
 
 @admin_bp.route("/bundles", methods=["GET", "POST", "PUT", "DELETE"])
@@ -47,7 +88,12 @@ def bundles():
             all_bundles = db.execute(
                 "SELECT * FROM data_bundles ORDER BY network, volume_mb"
             ).fetchall()
-            return render_template("admin/bundles.html", bundles=all_bundles)
+            counts = {
+                "total":    db.execute("SELECT COUNT(*) as c FROM data_bundles").fetchone()["c"],
+                "active":   db.execute("SELECT COUNT(*) as c FROM data_bundles WHERE is_active=1").fetchone()["c"],
+                "inactive": db.execute("SELECT COUNT(*) as c FROM data_bundles WHERE is_active=0").fetchone()["c"],
+            }
+            return render_template("admin/bundles.html", bundles=all_bundles, counts=counts)
 
         data = request.get_json()
 
@@ -55,11 +101,11 @@ def bundles():
             bundle_id = str(uuid.uuid4())
             db.execute(
                 """INSERT INTO data_bundles
-                   (id, network, offer_slug, label, volume_mb, validity_days, base_price_pesewas)
-                   VALUES (?,?,?,?,?,?,?)""",
+                   (id, network, offer_slug, label, volume_mb, validity_days, base_price_pesewas, is_active)
+                   VALUES (?,?,?,?,?,?,?,?)""",
                 (bundle_id, data["network"], data["offer_slug"], data["label"],
                  int(data["volume_mb"]), int(data["validity_days"]),
-                 int(data["base_price_pesewas"]))
+                 int(data["base_price_pesewas"]), int(data.get("is_active", 1)))
             )
             return jsonify({"ok": True, "id": bundle_id})
 
@@ -85,11 +131,17 @@ def resellers():
     config = current_app.config
     with global_db(config) as db:
         all_resellers = db.execute(
-            """SELECT u.*, s.slug, s.store_name
+            """SELECT u.*, s.slug, s.store_name,
+               (SELECT COUNT(*) FROM orders o JOIN stores st ON st.id=o.store_id WHERE st.user_id=u.id) as order_count
                FROM users u LEFT JOIN stores s ON s.user_id = u.id
                WHERE u.role='reseller' ORDER BY u.created_at DESC"""
         ).fetchall()
-    return render_template("admin/resellers.html", resellers=all_resellers)
+        counts = {
+            "total":    db.execute("SELECT COUNT(*) as c FROM users WHERE role='reseller'").fetchone()["c"],
+            "active":   db.execute("SELECT COUNT(*) as c FROM users WHERE role='reseller' AND is_active=1").fetchone()["c"],
+            "inactive": db.execute("SELECT COUNT(*) as c FROM users WHERE role='reseller' AND is_active=0").fetchone()["c"],
+        }
+    return render_template("admin/resellers.html", resellers=all_resellers, counts=counts)
 
 
 @admin_bp.route("/resellers/<user_id>/toggle", methods=["POST"])
@@ -109,9 +161,19 @@ def orders():
     config = current_app.config
     with global_db(config) as db:
         all_orders = db.execute(
-            "SELECT * FROM orders ORDER BY created_at DESC"
+            """SELECT o.*, b.label as bundle_label, s.store_name
+               FROM orders o
+               LEFT JOIN data_bundles b ON b.id = o.bundle_id
+               LEFT JOIN stores s ON s.id = o.store_id
+               ORDER BY o.created_at DESC"""
         ).fetchall()
-    return render_template("admin/orders.html", orders=all_orders)
+        counts = {
+            "total":      db.execute("SELECT COUNT(*) as c FROM orders").fetchone()["c"],
+            "dispatched": db.execute("SELECT COUNT(*) as c FROM orders WHERE status='dispatched'").fetchone()["c"],
+            "pending":    db.execute("SELECT COUNT(*) as c FROM orders WHERE status='pending'").fetchone()["c"],
+            "failed":     db.execute("SELECT COUNT(*) as c FROM orders WHERE status='failed'").fetchone()["c"],
+        }
+    return render_template("admin/orders.html", orders=all_orders, counts=counts)
 
 
 @admin_bp.route("/withdrawals", methods=["GET", "POST"])
@@ -121,11 +183,17 @@ def withdrawals():
     with global_db(config) as db:
         if request.method == "GET":
             all_wd = db.execute(
-                """SELECT w.*, u.full_name, u.email
+                """SELECT w.*, u.full_name, u.email, u.phone
                    FROM wallet_withdrawals w JOIN users u ON u.id = w.user_id
-                   ORDER BY w.created_at DESC"""
+                   ORDER BY CASE w.status WHEN 'pending' THEN 0 ELSE 1 END, w.created_at DESC"""
             ).fetchall()
-            return render_template("admin/withdrawals.html", withdrawals=all_wd)
+            counts = {
+                "total":   db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals").fetchone()["c"],
+                "pending": db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='pending'").fetchone()["c"],
+                "paid":    db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='paid'").fetchone()["c"],
+                "failed":  db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='failed'").fetchone()["c"],
+            }
+            return render_template("admin/withdrawals.html", withdrawals=all_wd, counts=counts)
 
         data = request.get_json()
         db.execute(

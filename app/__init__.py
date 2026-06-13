@@ -1,7 +1,7 @@
 from datetime import datetime
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 from .config import Config
-from .services.db import init_global_db
+from .services.db import init_global_db, global_db
 
 
 def create_app():
@@ -12,11 +12,28 @@ def create_app():
 
     @app.context_processor
     def inject_globals():
-        return {
+        ctx = {
             "now": datetime.utcnow(),
             "config": app.config,
             "request": request,
         }
+        # Inject nav badge counts only for admin pages (avoids DB hit on every public page)
+        if session.get("role") == "admin" and request.path.startswith("/admin"):
+            try:
+                with global_db(app.config) as db:
+                    ctx["nav_pending_orders"]      = db.execute(
+                        "SELECT COUNT(*) as c FROM orders WHERE status='pending'"
+                    ).fetchone()["c"]
+                    ctx["nav_pending_withdrawals"] = db.execute(
+                        "SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='pending'"
+                    ).fetchone()["c"]
+            except Exception:
+                ctx["nav_pending_orders"]      = 0
+                ctx["nav_pending_withdrawals"] = 0
+        else:
+            ctx["nav_pending_orders"]      = 0
+            ctx["nav_pending_withdrawals"] = 0
+        return ctx
 
     @app.errorhandler(404)
     def not_found(e):

@@ -1,8 +1,8 @@
-const modal     = document.getElementById('bundle-modal');
+const modal      = document.getElementById('bundle-modal');
 const modalTitle = document.getElementById('modal-title');
-const form      = document.getElementById('bundle-form');
-const errEl     = document.getElementById('bundle-error');
-let editing     = false;
+const form       = document.getElementById('bundle-form');
+const errEl      = document.getElementById('bundle-error');
+let editing      = false;
 
 function openModal() { modal.classList.remove('hidden'); }
 function closeModal() { modal.classList.add('hidden'); }
@@ -31,13 +31,14 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
     editing = true;
     modalTitle.textContent = 'Edit bundle';
     const b = JSON.parse(btn.dataset.bundle);
-    document.getElementById('bundle-id').value          = b.id;
-    document.getElementById('b-network').value          = b.network;
-    document.getElementById('b-offer-slug').value       = b.offer_slug;
-    document.getElementById('b-label').value            = b.label;
-    document.getElementById('b-volume').value           = b.volume_mb;
-    document.getElementById('b-validity').value         = b.validity_days;
-    document.getElementById('b-price').value            = b.base_price_pesewas;
+    document.getElementById('bundle-id').value    = b.id;
+    document.getElementById('b-network').value    = b.network;
+    document.getElementById('b-offer-slug').value = b.offer_slug;
+    document.getElementById('b-label').value      = b.label;
+    document.getElementById('b-volume').value     = (b.volume_mb / 1000).toFixed(2).replace(/\.?0+$/, '');
+    document.getElementById('b-validity').value   = b.validity_days;
+    document.getElementById('b-price').value      = (b.base_price_pesewas / 100).toFixed(2);
+    document.getElementById('b-active').value     = b.is_active ? '1' : '0';
     openModal();
   });
 });
@@ -61,15 +62,18 @@ form.addEventListener('submit', async e => {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving…';
 
+  const ghsValue = parseFloat(document.getElementById('b-price').value) || 0;
+  const gbValue  = parseFloat(document.getElementById('b-volume').value) || 0;
+
   const payload = {
-    id:                  document.getElementById('bundle-id').value,
-    network:             document.getElementById('b-network').value,
-    offer_slug:          document.getElementById('b-offer-slug').value.trim(),
-    label:               document.getElementById('b-label').value.trim(),
-    volume_mb:           parseInt(document.getElementById('b-volume').value),
-    validity_days:       parseInt(document.getElementById('b-validity').value),
-    base_price_pesewas:  parseInt(document.getElementById('b-price').value),
-    is_active:           1,
+    id:                 document.getElementById('bundle-id').value,
+    network:            document.getElementById('b-network').value,
+    offer_slug:         document.getElementById('b-offer-slug').value.trim(),
+    label:              document.getElementById('b-label').value.trim(),
+    volume_mb:          Math.round(gbValue * 1000),   // GB → MB
+    validity_days:      parseInt(document.getElementById('b-validity').value),
+    base_price_pesewas: Math.round(ghsValue * 100),   // GHS → pesewas
+    is_active:          parseInt(document.getElementById('b-active').value),
   };
 
   const resp = await fetch('/admin/bundles', {

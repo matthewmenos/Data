@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Bundles — Admin{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/dashboard.css" />{% endblock %}
 
 {% block content %}
 <div class="dash-layout">
@@ -7,83 +8,109 @@
 
   <div class="dash-main">
     <div class="dash-topbar">
-      <div>
-        <h1 class="dash-page-title">Data bundles</h1>
-        <p class="dash-page-sub">Manage the master bundle catalogue that resellers and guests see.</p>
+      <button class="topbar-hamburger" id="sidebar-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title-wrap">
+        <span class="topbar-title">Data Bundles</span>
+        <span class="topbar-subtitle">{{ counts.total }} total &middot; {{ counts.active }} active</span>
       </div>
       <div class="topbar-actions">
         <button class="btn btn-primary" id="add-bundle-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add bundle
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Bundle
         </button>
         {% include "partials/topbar_actions.html" %}
       </div>
     </div>
 
-    {% if bundles %}
-    <div class="table-wrap">
-      <table class="data-table" id="bundles-table">
-        <thead>
-          <tr>
-            <th>Label</th>
-            <th>Network</th>
-            <th>Volume</th>
-            <th>Validity</th>
-            <th>Base price</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for b in bundles %}
-          <tr data-id="{{ b['id'] }}">
-            <td class="td-bold">{{ b['label'] }}</td>
-            <td><span class="net-badge net-{{ b['network'] }}">{{ b['network']|upper }}</span></td>
-            <td>{{ b['volume_mb'] }} MB</td>
-            <td>{{ b['validity_days'] }}d</td>
-            <td>GHS {{ '%.2f'|format(b['base_price_pesewas'] / 100) }}</td>
-            <td>
-              <span class="status-pill {{ 'status-dispatched' if b['is_active'] else 'status-failed' }}">
-                {{ 'Active' if b['is_active'] else 'Inactive' }}
-              </span>
-            </td>
-            <td class="td-actions">
-              <button class="btn btn-ghost btn-sm edit-btn"
-                      data-bundle='{{ b | tojson }}'>Edit</button>
-              <button class="btn btn-danger btn-sm delete-btn"
-                      data-id="{{ b['id'] }}">Delete</button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="empty-dash">
-      <div class="empty-dash-icon">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <div class="dash-content">
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="bundle-search" placeholder="Search bundles…" />
+        </div>
+        <select class="filter-select" id="net-filter">
+          <option value="">All networks</option>
+          <option value="mtn">MTN</option>
+          <option value="telecel">Telecel</option>
+          <option value="airteltigo">AirtelTigo</option>
+        </select>
+        <select class="filter-select" id="status-filter">
+          <option value="">All status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
       </div>
-      <h3>No bundles yet</h3>
-      <p>Add your first data bundle to get started.</p>
-      <button class="btn btn-primary" id="add-bundle-btn-empty">Add bundle</button>
+
+      {% if bundles %}
+      <div class="panel">
+        <div class="panel-body no-pad">
+          <table class="data-table" id="bundles-table">
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Network</th>
+                <th>Volume</th>
+                <th>Validity</th>
+                <th>Base Price</th>
+                <th>Offer Slug</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in bundles %}
+              <tr data-id="{{ b['id'] }}" data-net="{{ b['network'] }}" data-status="{{ 'active' if b['is_active'] else 'inactive' }}">
+                <td class="td-bold">{{ b['label'] }}</td>
+                <td><span class="net-badge net-{{ b['network'] }}">{{ b['network']|upper }}</span></td>
+                <td>{% if b['volume_mb'] >= 1000 %}{{ '%.1f'|format(b['volume_mb'] / 1000) }}GB{% else %}{{ b['volume_mb'] }}MB{% endif %}</td>
+                <td>{{ b['validity_days'] }}d</td>
+                <td class="td-bold">GHS {{ '%.2f'|format(b['base_price_pesewas'] / 100) }}</td>
+                <td><code class="ref-code">{{ b['offer_slug'] }}</code></td>
+                <td>
+                  <span class="status-pill {{ 'status-dispatched' if b['is_active'] else 'status-failed' }}">
+                    {{ 'Active' if b['is_active'] else 'Inactive' }}
+                  </span>
+                </td>
+                <td class="td-actions">
+                  <button class="btn btn-ghost btn-sm edit-btn" data-bundle='{{ b | tojson }}'>Edit</button>
+                  <button class="btn btn-danger btn-sm delete-btn" data-id="{{ b['id'] }}">Delete</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state empty-state-lg">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <h3>No bundles yet</h3>
+        <p>Add your first data bundle to start selling.</p>
+        <button class="btn btn-primary" id="add-bundle-btn-empty">Add bundle</button>
+      </div>
+      {% endif %}
+
     </div>
-    {% endif %}
   </div>
 </div>
 
 <!-- Add / Edit modal -->
-<div class="modal hidden" id="bundle-modal">
-  <div class="modal-backdrop" id="modal-backdrop"></div>
-  <div class="modal-card">
-    <div class="modal-header">
-      <h3 id="modal-title">Add bundle</h3>
-      <button class="modal-close" id="cancel-modal" aria-label="Close">&times;</button>
+<div class="admin-modal hidden" id="bundle-modal">
+  <div class="admin-modal-backdrop" id="modal-backdrop"></div>
+  <div class="admin-modal-card">
+    <div class="admin-modal-header">
+      <h3 class="admin-modal-title" id="modal-title">Add Bundle</h3>
+      <button class="admin-modal-close" id="cancel-modal" aria-label="Close">&times;</button>
     </div>
 
     <form id="bundle-form" novalidate>
       <input type="hidden" id="bundle-id" name="id" />
 
-      <div class="field-row">
+      <div class="form-row">
         <div class="field">
           <label for="b-network">Network</label>
           <select id="b-network" name="network" required>
@@ -94,32 +121,41 @@
         </div>
         <div class="field">
           <label for="b-offer-slug">GigzHub offer slug</label>
-          <input type="text" id="b-offer-slug" name="offer_slug"
-                 placeholder="e.g. mtn-1gb-30d" required />
+          <input type="text" id="b-offer-slug" name="offer_slug" placeholder="e.g. mtn-1gb-30d" required />
         </div>
       </div>
 
       <div class="field">
         <label for="b-label">Display label</label>
-        <input type="text" id="b-label" name="label"
-               placeholder="e.g. 1GB — 30 Days" required />
+        <input type="text" id="b-label" name="label" placeholder="e.g. 1GB — 30 Days" required />
       </div>
 
-      <div class="field-row">
+      <div class="form-row">
         <div class="field">
-          <label for="b-volume">Volume (MB)</label>
-          <input type="number" id="b-volume" name="volume_mb" min="1" required />
+          <label for="b-volume">Volume (GB)</label>
+          <input type="number" id="b-volume" name="volume_gb" min="0.1" step="0.1" placeholder="1.0" required />
         </div>
         <div class="field">
           <label for="b-validity">Validity (days)</label>
-          <input type="number" id="b-validity" name="validity_days" min="1" required />
+          <input type="number" id="b-validity" name="validity_days" min="1" placeholder="30" required />
         </div>
       </div>
 
-      <div class="field">
-        <label for="b-price">Base price (pesewas)</label>
-        <input type="number" id="b-price" name="base_price_pesewas" min="1" required />
-        <span class="field-hint">100 pesewas = GHS 1.00</span>
+      <div class="form-row">
+        <div class="field">
+          <label for="b-price">Base price (GHS)</label>
+          <div class="input-with-icon">
+            <span class="input-icon input-icon-text">GHS</span>
+            <input type="number" id="b-price" name="base_price_ghs" min="0.01" step="0.01" placeholder="0.00" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="b-active">Status</label>
+          <select id="b-active" name="is_active">
+            <option value="1">Active</option>
+            <option value="0">Inactive</option>
+          </select>
+        </div>
       </div>
 
       <div id="bundle-error" class="form-error hidden"></div>
@@ -135,4 +171,31 @@
 
 {% block scripts %}
 <script src="/static/js/admin_bundles.js"></script>
+<script>
+  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+    document.querySelector('.dash-sidebar').classList.toggle('open');
+  });
+
+  // Client-side search + filter
+  const searchEl  = document.getElementById('bundle-search');
+  const netSel    = document.getElementById('net-filter');
+  const statusSel = document.getElementById('status-filter');
+  function applyFilters() {
+    const q  = (searchEl?.value || '').toLowerCase();
+    const n  = netSel?.value || '';
+    const s  = statusSel?.value || '';
+    document.querySelectorAll('#bundles-table tbody tr').forEach(tr => {
+      const text   = tr.textContent.toLowerCase();
+      const trNet  = tr.dataset.net || '';
+      const trStat = tr.dataset.status || '';
+      tr.style.display =
+        (!q || text.includes(q)) &&
+        (!n || trNet === n) &&
+        (!s || trStat === s) ? '' : 'none';
+    });
+  }
+  searchEl?.addEventListener('input', applyFilters);
+  netSel?.addEventListener('change', applyFilters);
+  statusSel?.addEventListener('change', applyFilters);
+</script>
 {% endblock %}

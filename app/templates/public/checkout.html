@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Checkout — Mac Data Hub{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/checkout.css" />{% endblock %}
 
 {% block content %}
 <div class="checkout-page">
@@ -77,7 +78,10 @@
 
         <div class="osc-bundle">
           <div class="osc-network-badge osc-{{ bundle['network'] }}">{{ bundle['network']|upper }}</div>
-          <div class="osc-bundle-name">{{ bundle['label'] }}</div>
+          <div class="osc-bundle-name">
+            {% if bundle['volume_mb'] >= 1000 %}{{ '%.0f'|format(bundle['volume_mb'] / 1000) }}GB{% else %}{{ bundle['volume_mb'] }}MB{% endif %}
+            — {{ bundle['label'] }}
+          </div>
           <div class="osc-bundle-meta">Valid for {{ bundle['validity_days'] }} day{{ 's' if bundle['validity_days'] != 1 }}</div>
         </div>
 
