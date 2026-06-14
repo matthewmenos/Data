@@ -141,6 +141,10 @@ ul { list-style: none; }
 /* Public nav theme toggle (header) */
 .header-actions { display: flex; align-items: center; gap: .5rem; }
 
+/* Dashboard pages have their own topbar/sidebar — hide the public site header */
+body:has(.dash-layout) .site-header { display: none; }
+body:has(.dash-layout) .main-content { min-height: 100vh; }
+
 /* ── Flash messages ───────────────────────────────────────── */
 .flash-container { padding: .5rem 1.5rem 0; }
 .flash {
@@ -164,14 +168,14 @@ ul { list-style: none; }
 }
 [data-theme="dark"] .site-footer { background: #020617; border-color: #0f172a; }
 .footer-inner {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 2.5rem; padding: 3rem 0 2rem; flex-wrap: wrap;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 2rem; padding: 3rem 0 2rem; text-align: center;
 }
-.footer-brand    { display: flex; align-items: flex-start; gap: .75rem; }
+.footer-brand    { display: flex; align-items: center; gap: .75rem; justify-content: center; }
 .footer-name     { font-weight: 700; color: #f1f5f9; font-size: .95rem; }
 .footer-tagline  { font-size: .8rem; margin-top: .15rem; }
-.footer-cols     { display: flex; gap: 3.5rem; flex-wrap: wrap; }
-.footer-col      { display: flex; flex-direction: column; gap: .5rem; }
+.footer-cols     { display: flex; gap: 3.5rem; flex-wrap: wrap; justify-content: center; }
+.footer-col      { display: flex; flex-direction: column; gap: .5rem; align-items: center; }
 .footer-col-title {
   font-weight: 700; color: #f1f5f9; font-size: .75rem;
   text-transform: uppercase; letter-spacing: .08em; margin-bottom: .3rem;
@@ -179,7 +183,10 @@ ul { list-style: none; }
 .footer-col a        { color: #64748b; font-size: .875rem; transition: color var(--transition); }
 .footer-col a:hover  { color: #f1f5f9; text-decoration: none; }
 .footer-bottom       { border-top: 1px solid #1e293b; padding: 1.1rem 0; font-size: .775rem; }
-.footer-bottom .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+.footer-bottom .container {
+  display: flex; justify-content: center; align-items: center;
+  flex-wrap: wrap; gap: .75rem; text-align: center;
+}
 
 /* ── Buttons ─────────────────────────────────────────────── */
 .btn {

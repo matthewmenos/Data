@@ -99,7 +99,7 @@
   height: 64px; background: var(--white); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: .6rem;
   padding: 0 1rem 0 1.25rem; position: sticky; top: 0; z-index: 200;
-  box-shadow: var(--shadow-sm); overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .topbar-hamburger {
   display: none; background: none; border: none; color: var(--text);
