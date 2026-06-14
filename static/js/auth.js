@@ -51,7 +51,8 @@ function togglePw(id, btn) {
       });
       var data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Something went wrong.');
-      window.location.href = data.authorization_url;
+      // Free registration returns a redirect URL; paid returns a Paystack authorization_url
+      window.location.href = data.redirect || data.authorization_url;
     } catch (err) {
       errEl.textContent  = err.message;
       errEl.classList.remove('hidden');

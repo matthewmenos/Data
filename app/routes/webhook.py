@@ -18,10 +18,17 @@ def paystack_webhook():
         return jsonify({"error": "Invalid signature"}), 401
 
     event = request.get_json()
-    if event.get("event") != "charge.success":
+    event_type = event.get("event", "")
+    data = event["data"]
+
+    # --- Transfer outcome (auto withdrawal) ---
+    if event_type in ("transfer.success", "transfer.failed", "transfer.reversed"):
+        _handle_transfer(config, event_type, data)
         return jsonify({"ok": True}), 200
 
-    data = event["data"]
+    if event_type != "charge.success":
+        return jsonify({"ok": True}), 200
+
     reference = data.get("reference", "")
     metadata = data.get("metadata", {})
 
@@ -133,6 +140,49 @@ def _mirror_order_to_user_db(config, user_id: str, order, bundle_label: str = ""
             "INSERT OR IGNORE INTO earnings (id, order_id, amount_pesewas) VALUES (?,?,?)",
             (earning_id, order["id"], order["profit_pesewas"])
         )
+
+
+def _handle_transfer(config, event_type: str, data: dict):
+    transfer_code = data.get("transfer_code", "")
+    if not transfer_code:
+        return
+    with global_db(config) as db:
+        wd = db.execute(
+            "SELECT * FROM wallet_withdrawals WHERE paystack_transfer_code=?",
+            (transfer_code,)
+        ).fetchone()
+        if not wd:
+            return
+
+        if event_type == "transfer.success":
+            db.execute(
+                "UPDATE wallet_withdrawals SET status='paid' WHERE id=?", (wd["id"],)
+            )
+            try:
+                broadcast_push(config, wd["user_id"],
+                               "Withdrawal successful",
+                               f"GHS {wd['amount_pesewas']/100:.2f} has been sent to {wd['mobile_number']}.",
+                               "/dashboard/wallet")
+            except Exception:
+                pass
+
+        elif event_type in ("transfer.failed", "transfer.reversed"):
+            if wd["status"] != "paid":
+                db.execute(
+                    "UPDATE wallet_withdrawals SET status='failed' WHERE id=?", (wd["id"],)
+                )
+                # Refund the balance since transfer never completed
+                db.execute(
+                    "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
+                    (wd["amount_pesewas"], wd["user_id"])
+                )
+                try:
+                    broadcast_push(config, wd["user_id"],
+                                   "Withdrawal failed",
+                                   f"Your GHS {wd['amount_pesewas']/100:.2f} withdrawal could not be completed. Your balance has been restored.",
+                                   "/dashboard/wallet")
+                except Exception:
+                    pass
 
 
 def _get_offer_slug(db, bundle_id: str) -> str:

@@ -57,22 +57,28 @@ def notifications():
     config = current_app.config
     uid, user, _ = _ctx(config)
     items = []
+    # last_seen lets the client tell us what it already saw, so unread count is accurate
+    last_seen = request.args.get("last_seen", "")
+
     with user_db(config, uid) as udb:
         recent_orders = udb.execute(
-            "SELECT id, bundle_label, network, profit_pesewas, status, created_at "
+            "SELECT id, bundle_label, network, profit_pesewas, created_at "
             "FROM orders ORDER BY created_at DESC LIMIT 8"
         ).fetchall()
-        unread_count = udb.execute(
-            "SELECT COUNT(*) as c FROM orders "
-            "WHERE created_at >= datetime('now','-24 hours')"
-        ).fetchone()["c"]
+        if last_seen:
+            unread_count = udb.execute(
+                "SELECT COUNT(*) as c FROM orders WHERE created_at > ?", (last_seen,)
+            ).fetchone()["c"]
+        else:
+            unread_count = udb.execute(
+                "SELECT COUNT(*) as c FROM orders WHERE created_at >= datetime('now','-24 hours')"
+            ).fetchone()["c"]
 
     for o in recent_orders:
-        icon = "green" if o["status"] == "dispatched" else "orange"
         profit = "GHS %.2f" % (o["profit_pesewas"] / 100)
         items.append({
             "type": "order",
-            "icon": icon,
+            "icon": "green",
             "msg": f"<strong>{o['bundle_label']}</strong> order — +{profit} profit",
             "time": o["created_at"][:16].replace("T", " "),
             "url": "/dashboard/orders",

@@ -95,12 +95,13 @@ async function _fetchNotifications() {
   const url = window._NOTIF_URL;
   if (!url) return;
   try {
-    const resp = await fetch(url, { credentials: 'same-origin' });
+    const lastSeen = localStorage.getItem('notif_last_seen') || '';
+    const fetchUrl = lastSeen ? `${url}?last_seen=${encodeURIComponent(lastSeen)}` : url;
+    const resp = await fetch(fetchUrl, { credentials: 'same-origin' });
     if (!resp.ok) return;
     const data = await resp.json();
     _renderNotifItems(data.items || []);
     _updateBadge(data.unread || 0);
-    // Update "View all" link
     const allLink = document.getElementById('notif-all-link');
     if (allLink && window._NOTIF_ALL) allLink.href = window._NOTIF_ALL;
     _notifLoaded = true;
@@ -113,11 +114,14 @@ function toggleNotifDropdown() {
   const isOpen = dd.classList.toggle('open');
   if (isOpen) {
     if (!_notifLoaded) _fetchNotifications();
+    // Mark all as read: record current time so next poll knows what's new
+    localStorage.setItem('notif_last_seen', new Date().toISOString().slice(0, 19).replace('T', ' '));
+    _updateBadge(0);
   }
 }
 
 function markAllRead() {
-  document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+  localStorage.setItem('notif_last_seen', new Date().toISOString().slice(0, 19).replace('T', ' '));
   _updateBadge(0);
 }
 

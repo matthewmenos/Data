@@ -59,11 +59,16 @@ def register():
     if request.method == "GET":
         config = current_app.config
         with global_db(config) as db:
-            fee_row = db.execute(
+            fee_row  = db.execute(
                 "SELECT value FROM app_settings WHERE key='reseller_registration_fee_pesewas'"
             ).fetchone()
+            free_row = db.execute(
+                "SELECT value FROM app_settings WHERE key='registration_free'"
+            ).fetchone()
+        is_free = free_row and free_row["value"] == "1"
         return render_template("auth/register.html",
-                               fee_pesewas=int(fee_row["value"]) if fee_row else 5000)
+                               fee_pesewas=int(fee_row["value"]) if fee_row else 5000,
+                               is_free=is_free)
 
     data = request.get_json()
     config = current_app.config
@@ -86,16 +91,34 @@ def register():
         if db.execute("SELECT id FROM stores WHERE slug=?", (slug,)).fetchone():
             return jsonify({"error": "Store URL is already taken."}), 400
 
-        fee_row = db.execute(
+        fee_row  = db.execute(
             "SELECT value FROM app_settings WHERE key='reseller_registration_fee_pesewas'"
         ).fetchone()
+        free_row = db.execute(
+            "SELECT value FROM app_settings WHERE key='registration_free'"
+        ).fetchone()
+        is_free = free_row and free_row["value"] == "1"
         fee = int(fee_row["value"]) if fee_row else 5000
 
         user_id  = str(uuid.uuid4())
-        reg_id   = str(uuid.uuid4())
         store_id = str(uuid.uuid4())
-        reference = f"REG-{reg_id[:8].upper()}"
 
+        if is_free:
+            # Activate immediately — no payment needed
+            db.execute(
+                """INSERT INTO users (id, email, password_hash, full_name, phone, role, is_active)
+                   VALUES (?,?,?,?,?,'reseller',1)""",
+                (user_id, email, generate_password_hash(password), full_name, phone)
+            )
+            db.execute(
+                "INSERT INTO stores (id, user_id, slug, store_name) VALUES (?,?,?,?)",
+                (store_id, user_id, slug, f"{full_name}'s Store")
+            )
+            return jsonify({"redirect": "/login?registered=1"})
+
+        # Paid path — create pending user, charge via Paystack
+        reg_id    = str(uuid.uuid4())
+        reference = f"REG-{reg_id[:8].upper()}"
         db.execute(
             """INSERT INTO users (id, email, password_hash, full_name, phone, role, is_active)
                VALUES (?,?,?,?,?,'reseller',0)""",

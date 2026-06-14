@@ -33,6 +33,10 @@
           <span class="count-pill-num">{{ counts.pending }}</span>
           <span class="count-pill-label">Pending</span>
         </div>
+        <div class="count-pill count-pill-blue">
+          <span class="count-pill-num">{{ counts.processing }}</span>
+          <span class="count-pill-label">Processing</span>
+        </div>
         <div class="count-pill count-pill-green">
           <span class="count-pill-num">{{ counts.paid }}</span>
           <span class="count-pill-label">Paid</span>
@@ -58,6 +62,7 @@
         <select class="filter-select" id="wd-status-filter">
           <option value="">All status</option>
           <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
           <option value="paid">Paid</option>
           <option value="failed">Rejected</option>
         </select>
@@ -93,8 +98,10 @@
                 <td class="td-date">{{ w['created_at'][:10] }}</td>
                 <td class="td-actions">
                   {% if w['status'] == 'pending' %}
-                  <button class="btn btn-primary btn-sm mark-paid-btn" data-id="{{ w['id'] }}">Mark paid</button>
+                  <button class="btn btn-primary btn-sm approve-btn" data-id="{{ w['id'] }}">Approve &amp; Pay</button>
                   <button class="btn btn-danger btn-sm mark-failed-btn" data-id="{{ w['id'] }}">Reject</button>
+                  {% elif w['status'] == 'processing' %}
+                  <span class="status-pill status-pending">Sending…</span>
                   {% else %}
                   <span class="td-muted td-sm">{{ w['status']|capitalize }}</span>
                   {% endif %}

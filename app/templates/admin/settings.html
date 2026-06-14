@@ -91,15 +91,35 @@
             Reseller fees
           </h2>
           <div class="settings-grid">
-            <div class="field">
+            <div class="field" style="grid-column:1/-1">
+              <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
+                <label class="toggle-switch" for="reg-free-toggle" style="margin:0">
+                  <input type="checkbox" id="reg-free-toggle" name="registration_free" value="1"
+                         {% if settings.get('registration_free') == '1' %}checked{% endif %} />
+                  <span class="toggle-track">
+                    <span class="toggle-thumb"></span>
+                  </span>
+                </label>
+                <span style="font-weight:600;font-size:.92rem">Free registration</span>
+                <span style="font-size:.82rem;color:var(--text-muted)" id="reg-free-label">
+                  {% if settings.get('registration_free') == '1' %}
+                    Resellers sign up for free — no payment required
+                  {% else %}
+                    Toggle to allow resellers to register without paying a fee
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+            <div class="field" id="reg-fee-field">
               <label for="reg-fee-ghs">Registration fee (GHS)</label>
               <div class="input-with-icon">
                 <span class="input-icon input-icon-text">GHS</span>
                 <input type="number" id="reg-fee-ghs" name="reg_fee_ghs"
                        value="{{ '%.2f'|format(settings.get('reseller_registration_fee_pesewas', '5000')|int / 100) }}"
-                       min="0" step="0.01" required />
+                       min="0.01" step="0.01"
+                       {% if settings.get('registration_free') == '1' %}disabled{% endif %} />
               </div>
-              <span class="field-hint">One-time fee when a reseller registers.</span>
+              <span class="field-hint">One-time fee when a reseller registers (ignored when free registration is on).</span>
             </div>
             <div class="field">
               <label for="min-wd-ghs">Minimum withdrawal (GHS)</label>
@@ -350,6 +370,23 @@
   }
 
   if (removeBtn) removeBtn.addEventListener('click', removeLogo);
+})();
+
+/* ── Free registration toggle ── */
+(function () {
+  var toggle   = document.getElementById('reg-free-toggle');
+  var feeField = document.getElementById('reg-fee-field');
+  var feeInput = document.getElementById('reg-fee-ghs');
+  var label    = document.getElementById('reg-free-label');
+  if (!toggle) return;
+  function apply(free) {
+    feeInput.disabled = free;
+    feeField.style.opacity = free ? '.45' : '';
+    label.textContent = free
+      ? 'Resellers sign up for free — no payment required'
+      : 'Toggle to allow resellers to register without paying a fee';
+  }
+  toggle.addEventListener('change', function () { apply(this.checked); });
 })();
 
 function togglePw(id, btn) {

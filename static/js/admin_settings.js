@@ -16,6 +16,10 @@ form.addEventListener('submit', async e => {
   // Pass all string fields through directly
   fd.forEach((v, k) => { payload[k] = v; });
 
+  // Checkbox: FormData only includes it when checked — explicitly set 0 when unchecked
+  const freeToggle = document.getElementById('reg-free-toggle');
+  payload['registration_free'] = freeToggle && freeToggle.checked ? '1' : '0';
+
   // Convert GHS → pesewas for fee fields
   const regGhs = parseFloat(fd.get('reg_fee_ghs')) || 0;
   const wdGhs  = parseFloat(fd.get('min_wd_ghs'))  || 0;

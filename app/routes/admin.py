@@ -6,9 +6,17 @@ from ..services.db import global_db
 from ..services.push import broadcast_push
 from ..services.storage import upload_asset, delete_asset
 from ..services.gigzhub import get_offers
+from ..services.paystack import create_transfer_recipient, initiate_transfer
 
 ALLOWED_LOGO_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_LOGO_BYTES = 2 * 1024 * 1024
+
+# Paystack Ghana mobile money bank codes
+MOMO_BANK_CODES = {
+    "mtn":        "MTN",
+    "telecel":    "VDF",
+    "airteltigo": "ATL",
+}
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -90,6 +98,7 @@ def dashboard():
 def notifications():
     config = current_app.config
     items = []
+    last_seen = request.args.get("last_seen", "")
     with global_db(config) as db:
         pending_orders = db.execute(
             "SELECT COUNT(*) as c FROM orders WHERE status='pending'"
@@ -272,32 +281,86 @@ def withdrawals():
                    ORDER BY CASE w.status WHEN 'pending' THEN 0 ELSE 1 END, w.created_at DESC"""
             ).fetchall()
             counts = {
-                "total":   db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals").fetchone()["c"],
-                "pending": db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='pending'").fetchone()["c"],
-                "paid":    db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='paid'").fetchone()["c"],
-                "failed":  db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='failed'").fetchone()["c"],
+                "total":      db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals").fetchone()["c"],
+                "pending":    db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='pending'").fetchone()["c"],
+                "processing": db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='processing'").fetchone()["c"],
+                "paid":       db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='paid'").fetchone()["c"],
+                "failed":     db.execute("SELECT COUNT(*) as c FROM wallet_withdrawals WHERE status='failed'").fetchone()["c"],
             }
             return render_template("admin/withdrawals.html", withdrawals=all_wd, counts=counts)
 
         data = request.get_json()
         new_status = data["status"]
         wd = db.execute(
-            "SELECT user_id, amount_pesewas, status FROM wallet_withdrawals WHERE id=?",
+            """SELECT w.*, u.full_name, u.email
+               FROM wallet_withdrawals w JOIN users u ON u.id = w.user_id
+               WHERE w.id=?""",
             (data["id"],)
         ).fetchone()
         if not wd:
             return jsonify({"ok": False, "error": "Withdrawal not found."}), 404
-        db.execute(
-            "UPDATE wallet_withdrawals SET status=? WHERE id=?",
-            (new_status, data["id"])
-        )
-        # Refund balance if marking failed (only from pending/processing)
-        if new_status == "failed" and wd["status"] in ("pending", "processing"):
-            db.execute(
-                "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
-                (wd["amount_pesewas"], wd["user_id"])
-            )
-        return jsonify({"ok": True})
+
+        # Reject path — refund and close
+        if new_status == "failed":
+            db.execute("UPDATE wallet_withdrawals SET status='failed' WHERE id=?", (data["id"],))
+            if wd["status"] in ("pending", "processing"):
+                db.execute(
+                    "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
+                    (wd["amount_pesewas"], wd["user_id"])
+                )
+                try:
+                    broadcast_push(config, wd["user_id"],
+                                   "Withdrawal rejected",
+                                   f"Your GHS {wd['amount_pesewas']/100:.2f} withdrawal was rejected. Your balance has been restored.",
+                                   "/dashboard/wallet")
+                except Exception:
+                    pass
+            return jsonify({"ok": True})
+
+        # Approve path — trigger Paystack transfer
+        if new_status == "approved":
+            if wd["status"] != "pending":
+                return jsonify({"ok": False, "error": "Only pending withdrawals can be approved."}), 400
+
+            bank_code = MOMO_BANK_CODES.get(wd["network"].lower())
+            if not bank_code:
+                return jsonify({"ok": False, "error": f"Unsupported network: {wd['network']}"}), 400
+
+            try:
+                recipient = create_transfer_recipient(
+                    config["PAYSTACK_SECRET_KEY"],
+                    wd["full_name"],
+                    wd["mobile_number"],
+                    bank_code,
+                )
+                recipient_code = recipient["data"]["recipient_code"]
+
+                transfer_ref = f"WD-{data['id'][:8].upper()}"
+                transfer = initiate_transfer(
+                    config["PAYSTACK_SECRET_KEY"],
+                    wd["amount_pesewas"],
+                    recipient_code,
+                    transfer_ref,
+                    reason=f"Wallet withdrawal for {wd['full_name']}",
+                )
+                transfer_code = transfer["data"].get("transfer_code", "")
+                db.execute(
+                    "UPDATE wallet_withdrawals SET status='processing', paystack_transfer_code=? WHERE id=?",
+                    (transfer_code, data["id"])
+                )
+                try:
+                    broadcast_push(config, wd["user_id"],
+                                   "Withdrawal approved",
+                                   f"Your GHS {wd['amount_pesewas']/100:.2f} withdrawal is being processed.",
+                                   "/dashboard/wallet")
+                except Exception:
+                    pass
+                return jsonify({"ok": True, "status": "processing"})
+
+            except Exception as exc:
+                return jsonify({"ok": False, "error": f"Paystack transfer failed: {str(exc)}"}), 502
+
+        return jsonify({"ok": False, "error": "Invalid status."}), 400
 
 
 @admin_bp.route("/settings", methods=["GET", "POST"])
