@@ -17,7 +17,7 @@
       </div>
       <button class="btn btn-ghost btn-sm" id="refresh-gigzhub-btn" title="Load live GigzHub prices" style="flex-shrink:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="refresh-icon"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        GigzHub Catalog
+        <span>GigzHub Catalog</span>
       </button>
       <button class="btn btn-primary" id="add-bundle-btn" style="flex-shrink:0">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -37,7 +37,7 @@
           </span>
           <span id="gigzhub-fetched-at" style="font-size:.73rem;color:var(--text-muted)"></span>
         </div>
-        <div class="panel-body no-pad">
+        <div class="panel-body no-pad tbl-wrap tbl-gigzhub">
           <table class="data-table" id="gigzhub-table">
             <thead>
               <tr>
@@ -307,5 +307,35 @@
 </script>
 <style>
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 640px) {
+    /* GigzHub catalog — card layout */
+    .tbl-gigzhub tr { grid-template-columns: 1fr 1fr; }
+
+    /* Name spans full width as the card heading */
+    .tbl-gigzhub td:nth-child(1) { grid-column: 1/-1; font-weight: 700; }
+    .tbl-gigzhub td:nth-child(1)::before { content: ''; }
+
+    .tbl-gigzhub td:nth-child(2)::before { content: 'ISP '; }
+    .tbl-gigzhub td:nth-child(3)::before { content: 'TYPE '; }
+
+    /* Slug spans full width */
+    .tbl-gigzhub td:nth-child(4) { grid-column: 1/-1; }
+    .tbl-gigzhub td:nth-child(4)::before { content: 'SLUG '; }
+
+    /* Volumes spans full width */
+    .tbl-gigzhub td:nth-child(5) { grid-column: 1/-1; flex-wrap: wrap; gap: .3rem; }
+    .tbl-gigzhub td:nth-child(5)::before { content: 'VOLUMES '; align-self: center; }
+
+    /* Status badge */
+    .tbl-gigzhub td:nth-child(6)::before { content: ''; }
+
+    /* Hide text labels on the topbar buttons on very small screens */
+    #refresh-gigzhub-btn span { display: none; }
+  }
+
+  @media (max-width: 420px) {
+    #refresh-gigzhub-btn > svg { margin: 0; }
+  }
 </style>
 {% endblock %}

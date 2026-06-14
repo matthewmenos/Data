@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{{ store['store_name'] }} — Mac Data Hub{% endblock %}
-{% block head %}<link rel="stylesheet" href="/static/css/storefront.css" />{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/storefront.css" />
+<style>
+  .site-header { display: none !important; }
+  .site-footer .footer-brand,
+  .site-footer .footer-cols { display: none !important; }
+</style>
+{% endblock %}
 
 {% block content %}
 
