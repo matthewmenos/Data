@@ -243,6 +243,8 @@ def toggle_reseller(user_id):
     config = current_app.config
     with global_db(config) as db:
         user = db.execute("SELECT is_active FROM users WHERE id=?", (user_id,)).fetchone()
+        if not user:
+            return jsonify({"ok": False, "error": "User not found."}), 404
         new_state = 0 if user["is_active"] else 1
         db.execute("UPDATE users SET is_active=? WHERE id=?", (new_state, user_id))
     return jsonify({"ok": True, "is_active": new_state})
@@ -300,21 +302,22 @@ def withdrawals():
         if not wd:
             return jsonify({"ok": False, "error": "Withdrawal not found."}), 404
 
-        # Reject path — refund and close
+        # Reject path — only allowed while still pending (before Paystack transfer is sent)
         if new_status == "failed":
+            if wd["status"] != "pending":
+                return jsonify({"ok": False, "error": "Only pending withdrawals can be rejected. Processing withdrawals are handled automatically by Paystack."}), 400
             db.execute("UPDATE wallet_withdrawals SET status='failed' WHERE id=?", (data["id"],))
-            if wd["status"] in ("pending", "processing"):
-                db.execute(
-                    "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
-                    (wd["amount_pesewas"], wd["user_id"])
-                )
-                try:
-                    broadcast_push(config, wd["user_id"],
-                                   "Withdrawal rejected",
-                                   f"Your GHS {wd['amount_pesewas']/100:.2f} withdrawal was rejected. Your balance has been restored.",
-                                   "/dashboard/wallet")
-                except Exception:
-                    pass
+            db.execute(
+                "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
+                (wd["amount_pesewas"], wd["user_id"])
+            )
+            try:
+                broadcast_push(config, wd["user_id"],
+                               "Withdrawal rejected",
+                               f"Your GHS {wd['amount_pesewas']/100:.2f} withdrawal was rejected. Your balance has been restored.",
+                               "/dashboard/wallet")
+            except Exception:
+                pass
             return jsonify({"ok": True})
 
         # Approve path — trigger Paystack transfer

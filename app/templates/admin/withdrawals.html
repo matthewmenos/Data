@@ -101,7 +101,7 @@
                   <button class="btn btn-primary btn-sm approve-btn" data-id="{{ w['id'] }}">Approve &amp; Pay</button>
                   <button class="btn btn-danger btn-sm mark-failed-btn" data-id="{{ w['id'] }}">Reject</button>
                   {% elif w['status'] == 'processing' %}
-                  <span class="status-pill status-pending">Sending…</span>
+                  <span class="status-pill status-pending" title="Awaiting Paystack confirmation">Sending…</span>
                   {% else %}
                   <span class="td-muted td-sm">{{ w['status']|capitalize }}</span>
                   {% endif %}

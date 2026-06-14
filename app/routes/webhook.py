@@ -167,7 +167,9 @@ def _handle_transfer(config, event_type: str, data: dict):
                 pass
 
         elif event_type in ("transfer.failed", "transfer.reversed"):
-            if wd["status"] != "paid":
+            # Only act if still processing — if already "failed" (admin rejected) or "paid",
+            # skip to avoid double-refunding the balance
+            if wd["status"] == "processing":
                 db.execute(
                     "UPDATE wallet_withdrawals SET status='failed' WHERE id=?", (wd["id"],)
                 )

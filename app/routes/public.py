@@ -80,6 +80,8 @@ def checkout():
 
     with global_db(config) as db:
         bundle = db.execute("SELECT * FROM data_bundles WHERE id=?", (bundle_id,)).fetchone()
+        if not bundle:
+            return jsonify({"error": "Bundle not found."}), 404
         store = db.execute("SELECT * FROM stores WHERE id=?", (store_id,)).fetchone() if store_id else None
         price_row = None
         if store:
