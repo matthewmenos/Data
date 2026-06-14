@@ -6,7 +6,7 @@ _DEFAULT_BASE = "https://gigzhub.net/api/v1"
 NETWORK_MAP = {
     "mtn": "mtn",
     "telecel": "telecel",
-    "airteltigo": "airteltigo",
+    "airteltigo": "at",
 }
 
 

@@ -190,30 +190,21 @@ def gigzhub_prices():
         return jsonify({"ok": False, "error": "GigzHub API key not configured."}), 400
     try:
         raw = get_offers(api_key)
-        # raw may be a list of offers or a dict wrapping them
-        if isinstance(raw, dict):
-            offers = (raw.get("data") or raw.get("offers")
-                      or raw.get("results") or list(raw.values())[0]
-                      if raw else [])
-            if not isinstance(offers, list):
-                offers = []
-        else:
-            offers = raw if isinstance(raw, list) else []
+        offers = raw.get("offers", []) if isinstance(raw, dict) else raw
 
-        # Normalise to {offer_slug: price_pesewas}
-        # Field names vary by GigzHub API version — try all known keys
-        prices = {}
+        catalog = []
         for o in offers:
             if not isinstance(o, dict):
                 continue
-            slug = (o.get("offerSlug") or o.get("offer_slug")
-                    or o.get("slug") or o.get("id") or "")
-            price = (o.get("price") or o.get("price_pesewas")
-                     or o.get("amount") or o.get("cost") or 0)
-            if slug:
-                prices[str(slug)] = int(float(price))
+            catalog.append({
+                "slug":    o.get("offerSlug", ""),
+                "name":    o.get("name", ""),
+                "isp":     o.get("isp", ""),
+                "type":    o.get("type", ""),
+                "volumes": o.get("volumes", []),
+            })
 
-        return jsonify({"ok": True, "prices": prices, "_sample": offers[:2]})
+        return jsonify({"ok": True, "catalog": catalog})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 502
 
