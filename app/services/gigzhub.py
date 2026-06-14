@@ -12,7 +12,8 @@ NETWORK_MAP = {
 
 def _base() -> str:
     try:
-        return current_app.config.get("GIGZHUB_BASE_URL", _DEFAULT_BASE)
+        url = current_app.config.get("GIGZHUB_BASE_URL", _DEFAULT_BASE) or _DEFAULT_BASE
+        return url.rstrip("/").removesuffix("/offers")
     except RuntimeError:
         return _DEFAULT_BASE
 

@@ -31,7 +31,7 @@ def create_app():
             if _overrides.get("gigzhub_api_key"):
                 app.config["GIGZHUB_API_KEY"] = _overrides["gigzhub_api_key"]
             if _overrides.get("gigzhub_base_url"):
-                app.config["GIGZHUB_BASE_URL"] = _overrides["gigzhub_base_url"]
+                app.config["GIGZHUB_BASE_URL"] = _overrides["gigzhub_base_url"].rstrip("/").removesuffix("/offers")
     except Exception:
         pass  # On first boot, app_settings may not have these keys yet
 
