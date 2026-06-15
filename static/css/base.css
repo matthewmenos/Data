@@ -352,7 +352,9 @@ body:has(.dash-layout) .main-content { min-height: 100vh; }
   border-color: rgba(255,255,255,.1);
   background: rgba(255,255,255,.06);
   box-shadow: inset 0 1px 3px rgba(0,0,0,.2);
+  color: var(--text);
 }
+[data-theme="dark"] .field select option { background: #1a2236; color: #e8eaf0; }
 [data-theme="dark"] .field input:focus,
 [data-theme="dark"] .field select:focus,
 [data-theme="dark"] .field textarea:focus {

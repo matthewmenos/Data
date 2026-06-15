@@ -183,6 +183,8 @@
   cursor: pointer; transition: border-color var(--transition), box-shadow var(--transition);
 }
 .om-select-wrap select:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3.5px rgba(0,107,63,.12); }
+[data-theme="dark"] .om-select-wrap select { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.1); color: var(--text); }
+[data-theme="dark"] .om-select-wrap select option { background: #1a2236; color: #e8eaf0; }
 .om-select-arrow {
   position: absolute; right: .85rem; top: 50%; transform: translateY(-50%);
   color: var(--text-muted); pointer-events: none;
