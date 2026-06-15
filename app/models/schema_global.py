@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS orders (
     paystack_reference  TEXT UNIQUE,
     status              TEXT NOT NULL DEFAULT 'pending', -- pending | paid | dispatched | failed
     gigzhub_order_id    TEXT,
+    gigzhub_error       TEXT,              -- last dispatch error message
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """

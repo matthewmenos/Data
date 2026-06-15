@@ -66,6 +66,8 @@ _MIGRATIONS = [
     "ALTER TABLE users ADD COLUMN payout_recipient_code TEXT",
     "ALTER TABLE users ADD COLUMN momo_network TEXT",
     "ALTER TABLE users ADD COLUMN momo_number TEXT",
+    # GigzHub dispatch error storage for failed orders
+    "ALTER TABLE orders ADD COLUMN gigzhub_error TEXT",
 ]
 
 

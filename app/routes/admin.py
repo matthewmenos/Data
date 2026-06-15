@@ -271,6 +271,67 @@ def orders():
     return render_template("admin/orders.html", orders=all_orders, counts=counts)
 
 
+@admin_bp.route("/orders/<order_id>/redispatch", methods=["POST"])
+@admin_required
+def redispatch_order(order_id):
+    """Retry a failed order against GigzHub without charging the customer again."""
+    config = current_app.config
+    from ..services.gigzhub import dispatch_bundle
+    from ..services.push import broadcast_push
+
+    with global_db(config) as db:
+        order = db.execute(
+            "SELECT o.*, b.offer_slug FROM orders o "
+            "LEFT JOIN data_bundles b ON b.id=o.bundle_id "
+            "WHERE o.id=?", (order_id,)
+        ).fetchone()
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found."}), 404
+        if order["status"] not in ("failed", "paid"):
+            return jsonify({"ok": False, "error": f"Cannot redispatch a '{order['status']}' order."}), 400
+
+    gigzhub_id = ""
+    gigzhub_error = ""
+    status = "failed"
+    try:
+        result = dispatch_bundle(
+            config["GIGZHUB_API_KEY"],
+            order["network"],
+            order["customer_phone"],
+            order["offer_slug"] or "",
+            order["volume_mb"] or 0,
+        )
+        data_obj = result.get("data") or result
+        gigzhub_id = (
+            str(data_obj.get("id", ""))
+            or str(data_obj.get("orderId", ""))
+            or str(data_obj.get("order_id", ""))
+            or str(data_obj.get("reference", ""))
+        )
+        status = "dispatched"
+    except Exception as exc:
+        gigzhub_error = str(exc)[:500]
+        return jsonify({"ok": False, "error": gigzhub_error}), 502
+
+    with global_db(config) as db:
+        db.execute(
+            "UPDATE orders SET status=?, gigzhub_order_id=?, gigzhub_error=NULL WHERE id=?",
+            (status, gigzhub_id, order_id)
+        )
+        # Credit reseller if this is the first successful dispatch
+        if order["store_id"] and order["profit_pesewas"] > 0:
+            store = db.execute(
+                "SELECT user_id FROM stores WHERE id=?", (order["store_id"],)
+            ).fetchone()
+            if store:
+                db.execute(
+                    "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
+                    (order["profit_pesewas"], store["user_id"])
+                )
+
+    return jsonify({"ok": True, "gigzhub_id": gigzhub_id})
+
+
 @admin_bp.route("/withdrawals", methods=["GET", "POST"])
 @admin_required
 def withdrawals():

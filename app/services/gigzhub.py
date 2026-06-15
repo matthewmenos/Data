@@ -37,12 +37,35 @@ def get_offers(api_key: str) -> list:
 
 
 def dispatch_bundle(api_key: str, network: str, phone: str,
-                    offer_slug: str, volume_mb: int) -> dict:
+                    offer_slug: str, volume_mb: int = 0) -> dict:
+    """
+    POST /order/:network
+    Payload: {"phone", "offerSlug", "volume" (GB units), "type": "single"}
+    volume_mb is converted to GB (integer) before sending.
+    Returns the full parsed JSON body. Raises ValueError on HTTP error.
+    """
     network_key = NETWORK_MAP.get(network.lower())
     if not network_key:
         raise ValueError(f"Unsupported network: {network}")
-    payload = {"phone": phone, "offerSlug": offer_slug, "volume": volume_mb}
-    resp = requests.post(f"{_base()}/order/{network_key}",
-                         json=payload, headers=_headers(api_key), timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+    volume_gb = max(1, round(volume_mb / 1000)) if volume_mb else 0
+    payload = {
+        "phone": phone,
+        "offerSlug": offer_slug,
+        "type": "single",
+    }
+    if volume_gb:
+        payload["volume"] = volume_gb
+    resp = requests.post(
+        f"{_base()}/order/{network_key}",
+        json=payload, headers=_headers(api_key), timeout=30
+    )
+    if not resp.ok:
+        raise ValueError(
+            f"GigzHub order failed (HTTP {resp.status_code}): {resp.text[:400]}"
+        )
+    try:
+        return resp.json()
+    except Exception:
+        raise ValueError(
+            f"GigzHub returned non-JSON (HTTP {resp.status_code}): {resp.text[:400]}"
+        )

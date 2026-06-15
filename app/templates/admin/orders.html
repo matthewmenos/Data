@@ -76,11 +76,12 @@
                 <th>Profit</th>
                 <th>Status</th>
                 <th>Date</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {% for o in orders %}
-              <tr data-net="{{ o['network'] }}" data-status="{{ o['status'] }}">
+              <tr data-net="{{ o['network'] }}" data-status="{{ o['status'] }}" id="order-row-{{ o['id'] }}">
                 <td><code class="ref-code">{{ o['paystack_reference'] or '—' }}</code></td>
                 <td>
                   <div class="td-bold">{{ o['customer_phone'] }}</div>
@@ -94,8 +95,18 @@
                 <td class="td-sm td-muted">{{ o['store_name'] or 'Direct' }}</td>
                 <td class="td-bold">GHS {{ '%.2f'|format(o['amount_pesewas'] / 100) }}</td>
                 <td class="td-muted">GHS {{ '%.2f'|format(o['profit_pesewas'] / 100) }}</td>
-                <td><span class="status-pill status-{{ o['status'] }}">{{ o['status'] }}</span></td>
+                <td>
+                  <span class="status-pill status-{{ o['status'] }}">{{ o['status'] }}</span>
+                  {% if o['gigzhub_error'] %}
+                  <div class="td-muted td-sm" style="margin-top:.25rem;max-width:160px;white-space:normal;color:#ef4444" title="{{ o['gigzhub_error'] }}">{{ o['gigzhub_error'][:60] }}{% if o['gigzhub_error']|length > 60 %}…{% endif %}</div>
+                  {% endif %}
+                </td>
                 <td class="td-date">{{ o['created_at'][:10] }}</td>
+                <td>
+                  {% if o['status'] in ('failed', 'paid') %}
+                  <button class="btn btn-sm btn-outline" onclick="redispatch('{{ o['id'] }}', this)">Retry</button>
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -137,5 +148,29 @@
   searchEl?.addEventListener('input', applyFilters);
   netSel?.addEventListener('change', applyFilters);
   statusSel?.addEventListener('change', applyFilters);
+
+  async function redispatch(orderId, btn) {
+    if (!confirm('Retry dispatching this order to GigzHub?')) return;
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      const resp = await fetch(`/admin/orders/${orderId}/redispatch`, { method: 'POST' });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed.');
+      const row = document.getElementById(`order-row-${orderId}`);
+      if (row) {
+        row.querySelector('.status-pill').className = 'status-pill status-dispatched';
+        row.querySelector('.status-pill').textContent = 'dispatched';
+        const errDiv = row.querySelector('[style*="ef4444"]');
+        if (errDiv) errDiv.remove();
+        btn.remove();
+      }
+    } catch (err) {
+      alert('Retry failed: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  }
 </script>
 {% endblock %}

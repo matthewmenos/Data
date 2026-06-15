@@ -68,24 +68,40 @@ def _handle_order(config, reference: str, metadata: dict):
         if not order:
             return
 
-        # Dispatch bundle via GigzHub
-        try:
-            result = dispatch_bundle(
-                config["GIGZHUB_API_KEY"],
-                order["network"],
-                order["customer_phone"],
-                _get_offer_slug(db, order["bundle_id"]),
-                order["volume_mb"]
-            )
-            gigzhub_id = result.get("id") or result.get("orderId", "")
-            status = "dispatched"
-        except Exception:
-            gigzhub_id = ""
-            status = "failed"
+        offer_slug = _get_offer_slug(db, order["bundle_id"])
 
+        # Mark paid before hitting GigzHub so we don't re-process on webhook replay
+        db.execute("UPDATE orders SET status='paid' WHERE id=?", (order["id"],))
+
+    # Dispatch bundle via GigzHub — outside the DB context so a slow API call
+    # doesn't hold the SQLite write lock
+    gigzhub_id = ""
+    gigzhub_error = ""
+    status = "failed"
+    try:
+        result = dispatch_bundle(
+            config["GIGZHUB_API_KEY"],
+            order["network"],
+            order["customer_phone"],
+            offer_slug,
+            order["volume_mb"],
+        )
+        # GigzHub may return the order ID under various keys — try them all
+        data_obj = result.get("data") or result
+        gigzhub_id = (
+            str(data_obj.get("id", ""))
+            or str(data_obj.get("orderId", ""))
+            or str(data_obj.get("order_id", ""))
+            or str(data_obj.get("reference", ""))
+        )
+        status = "dispatched"
+    except Exception as exc:
+        gigzhub_error = str(exc)[:500]
+
+    with global_db(config) as db:
         db.execute(
-            "UPDATE orders SET status=?, gigzhub_order_id=? WHERE id=?",
-            (status, gigzhub_id, order["id"])
+            "UPDATE orders SET status=?, gigzhub_order_id=?, gigzhub_error=? WHERE id=?",
+            (status, gigzhub_id, gigzhub_error or None, order["id"])
         )
 
         # Credit reseller wallet and mirror to their personal DB
@@ -104,23 +120,19 @@ def _handle_order(config, reference: str, metadata: dict):
                 ).fetchone()
                 label = bundle_row["label"] if bundle_row else order["network"]
                 _mirror_order_to_user_db(config, store["user_id"], order, label)
-                # Notify reseller
                 profit_ghs = "GHS %.2f" % (order["profit_pesewas"] / 100)
                 try:
                     broadcast_push(config, store["user_id"],
-                                   "Order dispatched! 🎉",
+                                   "Order dispatched!",
                                    f"{label} sent to {order['customer_phone']} — +{profit_ghs} profit",
                                    "/dashboard/orders")
                 except Exception:
                     pass
 
-        # Notify admin of every new order
+        # Notify admin of every completed/failed order
         try:
-            bundle_row = db.execute(
-                "SELECT label FROM data_bundles WHERE id=?", (order["bundle_id"],)
-            ).fetchone() if status == "failed" else None
             amt_ghs = "GHS %.2f" % (order["amount_pesewas"] / 100)
-            _notify_admins(config, status, order, amt_ghs)
+            _notify_admins(config, status, order, amt_ghs, gigzhub_error)
         except Exception:
             pass
 
@@ -192,15 +204,14 @@ def _get_offer_slug(db, bundle_id: str) -> str:
     return row["offer_slug"] if row else ""
 
 
-def _notify_admins(config, status: str, order, amt_ghs: str):
-    """Push to all push_subscriptions rows that belong to the admin (user_id IS NULL treated as guest;
-    admin subscriptions are stored with user_id = 'admin')."""
+def _notify_admins(config, status: str, order, amt_ghs: str, error: str = ""):
     if status == "dispatched":
         title = "New order dispatched"
         body  = f"{order['network'].upper()} bundle to {order['customer_phone']} — {amt_ghs}"
     else:
-        title = "Order failed"
-        body  = f"Bundle dispatch failed for {order['customer_phone']}"
+        title = "Order failed — action needed"
+        body  = f"Dispatch failed for {order['customer_phone']}: {error[:80]}" if error else \
+                f"Bundle dispatch failed for {order['customer_phone']}"
     try:
         broadcast_push(config, "admin", title, body, "/admin/orders")
     except Exception:
