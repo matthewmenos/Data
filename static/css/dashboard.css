@@ -349,6 +349,7 @@
 .panel-link:hover { text-decoration: underline; }
 
 /* ── Tables ──────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .data-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
 .data-table th {
   font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
@@ -819,19 +820,23 @@
   .tbl-wrap tbody { display: block; width: 100%; }
   .tbl-wrap tr {
     display: grid; width: 100%;
-    padding: .9rem 1rem; border-bottom: 1px solid var(--glass-border);
-    gap: .3rem .75rem;
+    padding: 1rem 1rem .85rem; border-bottom: 1px solid var(--glass-border);
+    gap: .4rem .75rem;
   }
   .tbl-wrap tbody tr:last-child { border-bottom: none; }
   .tbl-wrap tbody tr:hover { background: rgba(0,107,63,.04); }
   .tbl-wrap td {
-    padding: 0; border: none; font-size: .83rem;
-    display: flex; align-items: center; gap: .4rem;
+    padding: 0; border: none; font-size: .855rem;
+    display: flex; align-items: center; gap: .4rem; min-width: 0;
   }
+  .tbl-wrap td > * { min-width: 0; }
   .tbl-wrap td::before {
-    font-size: .68rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .04em; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+    font-size: .66rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--text-faint); white-space: nowrap; flex-shrink: 0;
   }
+  .tbl-wrap .td-bold { font-weight: 700; }
+  .tbl-wrap .ref-code { font-size: .72rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .tbl-wrap .td-muted.td-sm { font-size: .73rem; }
   .tbl-wrap .td-actions { flex-wrap: wrap; gap: .4rem; }
   .tbl-wrap .td-actions::before { display: none; }
 
@@ -849,6 +854,8 @@
   .tbl-admin-orders td:nth-child(8) { grid-column: 1/-1; }
   .tbl-admin-orders td:nth-child(8)::before { content: ''; }
   .tbl-admin-orders td:nth-child(9)::before { content: 'DATE '; }
+  .tbl-admin-orders td:nth-child(10) { grid-column: 1/-1; }
+  .tbl-admin-orders td:nth-child(10)::before { display: none; }
 
   /* Admin: Resellers */
   .tbl-admin-resellers tr { grid-template-columns: 1fr 1fr; }
@@ -892,12 +899,24 @@
   .tbl-reseller-orders tr { grid-template-columns: 1fr 1fr; }
   .tbl-reseller-orders td:nth-child(1) { grid-column: 1/-1; }
   .tbl-reseller-orders td:nth-child(1)::before { content: ''; }
-  .tbl-reseller-orders td:nth-child(2)::before { content: ''; }
+  .tbl-reseller-orders td:nth-child(2)::before { content: 'NETWORK '; }
   .tbl-reseller-orders td:nth-child(3)::before { content: 'CUSTOMER '; }
   .tbl-reseller-orders td:nth-child(4)::before { content: 'AMOUNT '; }
   .tbl-reseller-orders td:nth-child(5)::before { content: 'PROFIT '; }
+  .tbl-reseller-orders td:nth-child(6) { grid-column: 1/-1; }
   .tbl-reseller-orders td:nth-child(6)::before { content: ''; }
   .tbl-reseller-orders td:nth-child(7)::before { content: 'DATE '; }
+
+  /* Reseller: Dashboard recent orders */
+  .tbl-reseller-dash tr { grid-template-columns: 1fr 1fr; }
+  .tbl-reseller-dash td:nth-child(1) { grid-column: 1/-1; }
+  .tbl-reseller-dash td:nth-child(1)::before { content: ''; }
+  .tbl-reseller-dash td:nth-child(2)::before { content: 'NETWORK '; }
+  .tbl-reseller-dash td:nth-child(3)::before { content: 'CUSTOMER '; }
+  .tbl-reseller-dash td:nth-child(4)::before { content: 'PROFIT '; }
+  .tbl-reseller-dash td:nth-child(5) { grid-column: 1/-1; }
+  .tbl-reseller-dash td:nth-child(5)::before { content: ''; }
+  .tbl-reseller-dash td:nth-child(6)::before { content: 'DATE '; }
 
   /* Reseller: Wallet */
   .tbl-reseller-wallet tr { grid-template-columns: 1fr 1fr; }

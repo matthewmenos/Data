@@ -20,8 +20,6 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.3);
   }
   .sf-theme-toggle:hover { background: rgba(255,255,255,.28); transform: scale(1.08); }
-
-  /* show sun in light mode, moon in dark mode */
   .sf-theme-moon { display: none; }
   [data-theme="dark"] .sf-theme-sun  { display: none; }
   [data-theme="dark"] .sf-theme-moon { display: block; }
@@ -32,9 +30,7 @@
 
 <section class="storefront-hero">
   <button class="sf-theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle dark / light">
-    <!-- sun -->
     <svg class="sf-theme-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-    <!-- moon -->
     <svg class="sf-theme-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
   </button>
   <div class="container sf-hero-inner">
@@ -67,45 +63,6 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <span>Guaranteed delivery</span>
     </div>
-  </div>
-</div>
-
-
-<!-- Track Order -->
-<section class="track-section">
-  <div class="container">
-    <div class="track-card glass">
-      <div class="track-card-icon">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </div>
-      <div class="track-card-body">
-        <h2 class="track-card-title">Track Your Order</h2>
-        <p class="track-card-sub">Enter the phone number you bought data for to see your order history and status.</p>
-        <form class="track-form" id="track-form" novalidate>
-          <div class="track-input-row">
-            <input type="tel" id="track-phone" placeholder="e.g. 054xxxxxxx" maxlength="10" autocomplete="tel" required />
-            <button type="submit" class="btn btn-primary" id="track-btn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              Track
-            </button>
-          </div>
-          <div id="track-error" class="form-error hidden" style="margin-top:.5rem"></div>
-        </form>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Track Results Modal -->
-<div class="modal hidden" id="track-modal" role="dialog" aria-modal="true" aria-labelledby="track-modal-title">
-  <div class="modal-backdrop" id="track-modal-backdrop"></div>
-  <div class="order-modal-card track-modal-card">
-    <div class="order-modal-header">
-      <h2 class="order-modal-title" id="track-modal-title">Order History</h2>
-      <button class="order-modal-close" id="track-modal-close" aria-label="Close">&times;</button>
-    </div>
-    <p class="order-modal-sub" id="track-modal-sub"></p>
-    <div id="track-results"></div>
   </div>
 </div>
 
@@ -166,31 +123,21 @@
 <div class="modal hidden" id="order-modal" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
   <div class="modal-backdrop" id="order-modal-backdrop"></div>
   <div class="order-modal-card">
-
     <div class="order-modal-header">
       <h2 class="order-modal-title" id="order-modal-title">Data</h2>
       <button class="order-modal-close" id="order-modal-close" aria-label="Close">&times;</button>
     </div>
-
     <p class="order-modal-sub">Fill out the details below</p>
-
     <form id="order-form" novalidate>
       <input type="hidden" id="om-store-id" value="{{ store['id'] }}" />
-
       <div class="field">
         <label for="om-phone">Beneficiary Number</label>
-        <input type="tel" id="om-phone" name="phone"
-               placeholder="e.g. 054xxxxxxx"
-               maxlength="10" autocomplete="tel" required />
+        <input type="tel" id="om-phone" name="phone" placeholder="e.g. 054xxxxxxx" maxlength="10" autocomplete="tel" required />
       </div>
-
       <div class="field">
         <label for="om-email">Email (for receipt)</label>
-        <input type="email" id="om-email" name="email"
-               placeholder="you@example.com"
-               autocomplete="email" required />
+        <input type="email" id="om-email" name="email" placeholder="you@example.com" autocomplete="email" required />
       </div>
-
       <div class="field">
         <label for="om-package">Select Data Package</label>
         <div class="om-select-wrap">
@@ -200,25 +147,18 @@
           <svg class="om-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
-
-      <div id="om-price-display" class="om-price-display hidden">
-        Total: <strong id="om-price-value"></strong>
-      </div>
-
+      <div id="om-price-display" class="om-price-display hidden">Total: <strong id="om-price-value"></strong></div>
       <div id="om-error" class="form-error hidden"></div>
-
-      <button type="submit" class="btn om-pay-btn" id="om-pay-btn">
-        Proceed to Payment
-      </button>
-
+      <button type="submit" class="btn om-pay-btn" id="om-pay-btn">Proceed to Payment</button>
       <div class="secure-note" style="margin-top:.9rem;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Secured by Paystack &mdash; mobile money &amp; card accepted
       </div>
     </form>
-
   </div>
 </div>
+
+{% include "partials/help_fab.html" %}
 
 <!-- Store bundle data for JS -->
 <script>
@@ -243,4 +183,5 @@ window.PAYSTACK_PUBLIC_KEY = "{{ config['PAYSTACK_PUBLIC_KEY'] }}";
 {% block scripts %}
 <script src="/static/js/home.js"></script>
 <script src="/static/js/track.js"></script>
+<script src="/static/js/help-fab.js"></script>
 {% endblock %}

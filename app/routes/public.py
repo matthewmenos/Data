@@ -1,8 +1,10 @@
 import uuid
 from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, send_from_directory
 import os
-from ..services.db import global_db
-from ..services.paystack import initialize_transaction
+from ..services.db import global_db, user_db
+from ..services.paystack import initialize_transaction, verify_transaction
+from ..services.gigzhub import dispatch_bundle
+from ..services.push import broadcast_push
 
 public_bp = Blueprint("public", __name__)
 
@@ -156,4 +158,136 @@ def track_orders():
 def checkout_verify():
     ref = request.args.get("ref", "")
     return render_template("public/checkout_verify.html", reference=ref)
+
+
+@public_bp.route("/verify-payment", methods=["POST"])
+def verify_payment():
+    config = current_app.config
+    data = request.get_json() or {}
+    reference = data.get("reference", "").strip().upper()
+    phone = data.get("phone", "").strip()
+
+    if not reference:
+        return jsonify({"ok": False, "error": "Paystack reference is required."}), 400
+
+    with global_db(config) as db:
+        order = db.execute(
+            """SELECT o.*, b.offer_slug, b.label as bundle_label
+               FROM orders o
+               LEFT JOIN data_bundles b ON b.id = o.bundle_id
+               WHERE o.paystack_reference=?""",
+            (reference,)
+        ).fetchone()
+
+        if not order:
+            return jsonify({"ok": False, "error": "Reference not found. Check the reference in your payment email and try again."}), 404
+
+        # Already delivered — just confirm
+        if order["status"] == "dispatched":
+            return jsonify({
+                "ok": True,
+                "already_done": True,
+                "message": f"Your {order['bundle_label'] or order['network'].upper()} data was successfully delivered to {order['customer_phone']}.",
+                "network": order["network"],
+                "label": order["bundle_label"],
+                "phone": order["customer_phone"],
+            })
+
+        # Save values we need after closing the DB context
+        offer_slug = order["offer_slug"] or ""
+        order_dict = dict(order)
+
+    # Check Paystack to confirm the payment is real
+    try:
+        ps_result = verify_transaction(config["PAYSTACK_SECRET_KEY"], reference)
+        ps_data = ps_result.get("data", {})
+        ps_status = ps_data.get("status", "")
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"Could not reach Paystack to verify payment: {exc}"}), 502
+
+    if ps_status != "success":
+        return jsonify({
+            "ok": False,
+            "error": f"Your payment has not been confirmed by Paystack (status: {ps_status}). If you were charged, please contact support with reference {reference}.",
+        })
+
+    # Payment is confirmed — dispatch now
+    gigzhub_id = ""
+    gigzhub_error = ""
+    status = "failed"
+    try:
+        result = dispatch_bundle(
+            config["GIGZHUB_API_KEY"],
+            order_dict["network"],
+            order_dict["customer_phone"],
+            offer_slug,
+            order_dict["volume_mb"],
+        )
+        data_obj = result.get("data") or result
+        gigzhub_id = (
+            str(data_obj.get("id", ""))
+            or str(data_obj.get("orderId", ""))
+            or str(data_obj.get("order_id", ""))
+            or str(data_obj.get("reference", ""))
+        )
+        status = "dispatched"
+    except Exception as exc:
+        gigzhub_error = str(exc)[:500]
+
+    with global_db(config) as db:
+        db.execute(
+            "UPDATE orders SET status=?, gigzhub_order_id=?, gigzhub_error=? WHERE id=?",
+            (status, gigzhub_id, gigzhub_error or None, order_dict["id"])
+        )
+
+        if status == "dispatched" and order_dict["store_id"]:
+            store = db.execute(
+                "SELECT user_id FROM stores WHERE id=?", (order_dict["store_id"],)
+            ).fetchone()
+            if store:
+                if order_dict["profit_pesewas"] > 0:
+                    db.execute(
+                        "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
+                        (order_dict["profit_pesewas"], store["user_id"])
+                    )
+                label = order_dict["bundle_label"] or order_dict["network"]
+                _mirror_order(config, store["user_id"], order_dict, label)
+                try:
+                    broadcast_push(config, store["user_id"],
+                                   "Order dispatched!",
+                                   f"{label} sent to {order_dict['customer_phone']}",
+                                   "/dashboard/orders")
+                except Exception:
+                    pass
+
+    if status == "dispatched":
+        return jsonify({
+            "ok": True,
+            "already_done": False,
+            "message": f"Your payment is confirmed and {order_dict['bundle_label'] or order_dict['network'].upper()} data is being sent to {order_dict['customer_phone']}.",
+            "network": order_dict["network"],
+            "label": order_dict["bundle_label"],
+            "phone": order_dict["customer_phone"],
+        })
+
+    return jsonify({
+        "ok": False,
+        "error": f"Your payment is confirmed but data delivery failed: {gigzhub_error}. Please contact support with reference {reference}.",
+    })
+
+
+def _mirror_order(config, user_id: str, order: dict, bundle_label: str):
+    with user_db(config, user_id) as udb:
+        udb.execute(
+            """INSERT OR IGNORE INTO orders
+               (id, bundle_label, network, customer_phone, amount_pesewas, profit_pesewas, status)
+               VALUES (?,?,?,?,?,?,?)""",
+            (order["id"], bundle_label, order["network"],
+             order["customer_phone"], order["amount_pesewas"],
+             order["profit_pesewas"], "dispatched")
+        )
+        udb.execute(
+            "INSERT OR IGNORE INTO earnings (id, order_id, amount_pesewas) VALUES (?,?,?)",
+            (str(uuid.uuid4()), order["id"], order["profit_pesewas"])
+        )
 

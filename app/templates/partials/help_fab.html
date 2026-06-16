@@ -1,0 +1,81 @@
+<!-- ── Help FAB ── -->
+<button class="help-fab" id="help-fab-btn" aria-label="Help — Track order or verify payment" onclick="openHelpChooser()">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-top:-3px;opacity:.75;">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/>
+  </svg>
+</button>
+
+<!-- ── Help Chooser Modal ── -->
+<div class="modal hidden" id="help-chooser-modal" role="dialog" aria-modal="true" aria-label="Help options">
+  <div class="modal-backdrop" id="help-chooser-backdrop" onclick="closeHelpChooser()"></div>
+  <div class="help-chooser-card">
+    <div class="help-chooser-header">
+      <h2 class="help-chooser-title">How can we help?</h2>
+      <button class="order-modal-close" onclick="closeHelpChooser()" aria-label="Close">&times;</button>
+    </div>
+    <p class="help-chooser-sub">Choose an option below</p>
+    <div class="help-options-grid">
+      <button class="help-option-btn" onclick="chooseTrack()">
+        <span class="help-option-icon help-option-icon-track">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <span class="help-option-label">Track Order</span>
+        <span class="help-option-desc">Check delivery status using your phone number</span>
+      </button>
+      <button class="help-option-btn" onclick="chooseVerify()">
+        <span class="help-option-icon help-option-icon-verify">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+        </span>
+        <span class="help-option-label">Verify Payment</span>
+        <span class="help-option-desc">Confirm your payment and trigger data delivery</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Track Order Modal ── -->
+<div class="modal hidden" id="track-modal" role="dialog" aria-modal="true" aria-label="Track your order">
+  <div class="modal-backdrop" id="track-modal-backdrop" onclick="closeTrackModal()"></div>
+  <div class="track-modal-card">
+    <div class="order-modal-header">
+      <h2 class="order-modal-title">Track Order</h2>
+      <button class="order-modal-close" onclick="closeTrackModal()" aria-label="Close">&times;</button>
+    </div>
+    <p class="order-modal-sub">Enter the number you bought data for</p>
+    <form id="track-form" novalidate>
+      <div class="track-input-row">
+        <input type="tel" id="track-phone" name="phone" placeholder="e.g. 054xxxxxxx" maxlength="10" autocomplete="tel" required />
+        <button type="submit" class="btn" id="track-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Track
+        </button>
+      </div>
+    </form>
+    <div id="track-results" class="track-results hidden"></div>
+  </div>
+</div>
+
+<!-- ── Verify Payment Modal ── -->
+<div class="modal hidden" id="verify-modal" role="dialog" aria-modal="true" aria-label="Verify your payment">
+  <div class="modal-backdrop" id="verify-modal-backdrop" onclick="closeVerifyModal()"></div>
+  <div class="verify-modal-card">
+    <div class="order-modal-header">
+      <h2 class="order-modal-title">Verify Payment</h2>
+      <button class="order-modal-close" onclick="closeVerifyModal()" aria-label="Close">&times;</button>
+    </div>
+    <p class="order-modal-sub">Enter your Paystack reference from your payment email</p>
+    <form id="verify-form" novalidate>
+      <div class="field">
+        <label for="verify-ref">Paystack Reference</label>
+        <input type="text" id="verify-ref" name="reference" placeholder="e.g. MDH-XXXXXXXX" autocomplete="off" required />
+      </div>
+      <div id="verify-error" class="form-error hidden"></div>
+      <div id="verify-success" class="verify-success-box hidden"></div>
+      <button type="submit" class="btn om-pay-btn" id="verify-btn">Verify &amp; Dispatch</button>
+      <p class="verify-hint">Your reference looks like <strong>MDH-XXXXXXXX</strong> and can be found in your Paystack payment confirmation email.</p>
+    </form>
+  </div>
+</div>
