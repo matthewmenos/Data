@@ -530,6 +530,22 @@
 }
 @media (max-width: 540px) { .form-row { flex-direction: column; gap: 0; } }
 
+/* ── Withdrawal fee preview ──────────────────────────────── */
+.wd-fee-preview {
+  background: rgba(0,107,63,.07); border: 1px solid rgba(0,107,63,.18);
+  border-radius: var(--radius-sm); padding: .7rem 1rem; margin-bottom: 1rem;
+  display: flex; flex-direction: column; gap: .35rem;
+}
+[data-theme="dark"] .wd-fee-preview { background: rgba(0,107,63,.12); border-color: rgba(0,107,63,.3); }
+.wd-fee-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: .855rem; color: var(--text-muted);
+}
+.wd-fee-row-total {
+  font-size: .92rem; font-weight: 800; color: var(--green);
+  padding-top: .35rem; border-top: 1px solid rgba(0,107,63,.15); margin-top: .1rem;
+}
+
 /* ── Section header ──────────────────────────────────────── */
 .dash-section-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -920,11 +936,13 @@
 
   /* Reseller: Wallet */
   .tbl-reseller-wallet tr { grid-template-columns: 1fr 1fr; }
-  .tbl-reseller-wallet td:nth-child(1)::before { content: 'AMOUNT '; }
-  .tbl-reseller-wallet td:nth-child(2)::before { content: 'MOBILE '; }
-  .tbl-reseller-wallet td:nth-child(3)::before { content: ''; }
-  .tbl-reseller-wallet td:nth-child(4)::before { content: ''; }
-  .tbl-reseller-wallet td:nth-child(5)::before { content: 'DATE '; }
+  .tbl-reseller-wallet td:nth-child(1)::before { content: 'REQUESTED '; }
+  .tbl-reseller-wallet td:nth-child(2)::before { content: 'FEE '; }
+  .tbl-reseller-wallet td:nth-child(3)::before { content: 'RECEIVED '; }
+  .tbl-reseller-wallet td:nth-child(4)::before { content: 'MOBILE '; }
+  .tbl-reseller-wallet td:nth-child(5)::before { content: ''; }
+  .tbl-reseller-wallet td:nth-child(6)::before { content: ''; }
+  .tbl-reseller-wallet td:nth-child(7)::before { content: 'DATE '; }
 
   /* Shared filter/count overrides */
   .filter-bar    { flex-direction: column; gap: .5rem; }

@@ -24,6 +24,19 @@
     openVerifyModal();
   }
 
+  function chooseSupport() {
+    closeHelpChooser();
+    var number = (window.SUPPORT_WHATSAPP || "").replace(/\D/g, "");
+    if (!number) return;
+    // Normalise Ghana numbers: 0XXXXXXXXX → 233XXXXXXXXX
+    if (number.startsWith("0") && number.length === 10) {
+      number = "233" + number.slice(1);
+    }
+    var url = "https://wa.me/" + number + "?text=" +
+      encodeURIComponent("Hi, I need help with my data order on Mac Data Hub.");
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   // ── Track Modal ───────────────────────────────────────────
   function openTrackModal() {
     var m = document.getElementById("track-modal");
@@ -61,7 +74,7 @@
     var err = document.getElementById("verify-error");
     var ok = document.getElementById("verify-success");
     var btn = document.getElementById("verify-btn");
-    if (form) form.reset();
+    if (form) { form.reset(); form.style.display = ""; }
     if (err) { err.textContent = ""; err.classList.add("hidden"); }
     if (ok) { ok.innerHTML = ""; ok.classList.add("hidden"); }
     if (btn) { btn.disabled = false; btn.textContent = "Verify & Dispatch"; }
@@ -79,7 +92,6 @@
       var errEl = document.getElementById("verify-error");
       var okEl = document.getElementById("verify-success");
       var btn = document.getElementById("verify-btn");
-
       var reference = (refInput ? refInput.value.trim().toUpperCase() : "");
 
       if (!reference) {
@@ -101,8 +113,7 @@
           if (btn) { btn.disabled = false; btn.textContent = "Verify & Dispatch"; }
 
           if (data.ok) {
-            var networkName = (data.network || "").toUpperCase();
-            var label = data.label || networkName + " Data";
+            var label = data.label || (data.network || "").toUpperCase() + " Data";
             var phone = data.phone || "";
             var alreadyTag = data.already_done
               ? '<span class="verify-tag verify-tag-done">Previously delivered</span>'
@@ -122,7 +133,7 @@
             showVerifyError(data.error || "Verification failed. Please try again.");
           }
         })
-        .catch(function (err) {
+        .catch(function () {
           if (btn) { btn.disabled = false; btn.textContent = "Verify & Dispatch"; }
           showVerifyError("Network error. Please check your connection and try again.");
         });
@@ -131,6 +142,19 @@
     function showVerifyError(msg) {
       var errEl = document.getElementById("verify-error");
       if (errEl) { errEl.textContent = msg; errEl.classList.remove("hidden"); }
+    }
+  }
+
+  // ── Hide support button if no WhatsApp number configured ─
+  function initSupportBtn() {
+    var btn = document.getElementById("help-option-support");
+    if (!btn) return;
+    var number = (window.SUPPORT_WHATSAPP || "").trim();
+    if (!number) {
+      btn.style.display = "none";
+      // If only 2 options remain, switch grid back to 2-col
+      var grid = document.querySelector(".help-options-grid-3");
+      if (grid) grid.classList.remove("help-options-grid-3");
     }
   }
 
@@ -150,13 +174,18 @@
   window.closeHelpChooser = closeHelpChooser;
   window.chooseTrack = chooseTrack;
   window.chooseVerify = chooseVerify;
+  window.chooseSupport = chooseSupport;
   window.closeTrackModal = closeTrackModal;
   window.closeVerifyModal = closeVerifyModal;
 
   // ── Init ──────────────────────────────────────────────────
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initVerifyForm);
+    document.addEventListener("DOMContentLoaded", function () {
+      initVerifyForm();
+      initSupportBtn();
+    });
   } else {
     initVerifyForm();
+    initSupportBtn();
   }
 })();

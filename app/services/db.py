@@ -68,6 +68,10 @@ _MIGRATIONS = [
     "ALTER TABLE users ADD COLUMN momo_number TEXT",
     # GigzHub dispatch error storage for failed orders
     "ALTER TABLE orders ADD COLUMN gigzhub_error TEXT",
+    # WhatsApp support number per reseller store
+    "ALTER TABLE stores ADD COLUMN support_whatsapp TEXT",
+    # Withdrawal fee charged by admin (stored on the withdrawal record)
+    "ALTER TABLE wallet_withdrawals ADD COLUMN fee_pesewas INTEGER NOT NULL DEFAULT 0",
 ]
 
 

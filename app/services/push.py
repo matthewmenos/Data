@@ -1,6 +1,5 @@
 """Web Push notification service using VAPID + pywebpush."""
 import json
-import base64
 from py_vapid import Vapid
 from pywebpush import webpush, WebPushException
 from .db import global_db
@@ -41,14 +40,9 @@ def get_vapid_public_key(config) -> str:
     return pub
 
 
-def send_push(config, subscription: dict, title: str, body: str,
-              url: str = "/", icon: str = "/static/icons/icon-192.png") -> bool:
-    """Send a push notification to one subscription. Returns True on success."""
-    private_key, _ = _get_or_create_vapid_keys(config)
-    app_url = config.get("APP_URL", "")
-    # VAPID claims: mailto must be a real address
-    claims = {"sub": f"mailto:admin@{app_url.replace('https://', '').replace('http://', '').split('/')[0]}"}
-
+def _send_push_raw(private_key: str, claims: dict, subscription: dict,
+                   title: str, body: str, url: str, icon: str) -> bool:
+    """Low-level send — no DB access. Returns True on success, raises on 410."""
     payload = json.dumps({"title": title, "body": body, "url": url, "icon": icon})
     try:
         webpush(
@@ -59,15 +53,30 @@ def send_push(config, subscription: dict, title: str, body: str,
         )
         return True
     except WebPushException as e:
-        # 410 Gone = subscription expired/revoked — caller should delete it
         if hasattr(e, "response") and e.response is not None and e.response.status_code == 410:
             raise
         return False
 
 
+def send_push(config, subscription: dict, title: str, body: str,
+              url: str = "/", icon: str = "/static/icons/icon-192.svg") -> bool:
+    """Send a push notification to one subscription. Returns True on success."""
+    private_key, _ = _get_or_create_vapid_keys(config)
+    app_url = config.get("APP_URL", "")
+    claims = {"sub": f"mailto:admin@{app_url.replace('https://', '').replace('http://', '').split('/')[0]}"}
+    return _send_push_raw(private_key, claims, subscription, title, body, url, icon)
+
+
 def broadcast_push(config, user_id: str | None, title: str, body: str,
                    url: str = "/") -> None:
     """Send push to all subscriptions for a user_id (or all guests if None)."""
+    icon = "/static/icons/icon-192.svg"
+
+    # Fetch VAPID keys and subscriptions in one DB open — no nesting
+    private_key, _ = _get_or_create_vapid_keys(config)
+    app_url = config.get("APP_URL", "")
+    claims = {"sub": f"mailto:admin@{app_url.replace('https://', '').replace('http://', '').split('/')[0]}"}
+
     with global_db(config) as db:
         if user_id:
             rows = db.execute(
@@ -79,16 +88,21 @@ def broadcast_push(config, user_id: str | None, title: str, body: str,
                 "SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id IS NULL"
             ).fetchall()
 
-        stale_ids = []
-        for row in rows:
-            sub = {
-                "endpoint": row["endpoint"],
-                "keys": {"p256dh": row["p256dh"], "auth": row["auth"]},
-            }
-            try:
-                send_push(config, sub, title, body, url)
-            except WebPushException:
-                stale_ids.append(row["id"])
+        rows = [dict(r) for r in rows]
 
-        for sid in stale_ids:
-            db.execute("DELETE FROM push_subscriptions WHERE id=?", (sid,))
+    # Send outside the DB context so no nested global_db calls occur
+    stale_ids = []
+    for row in rows:
+        sub = {
+            "endpoint": row["endpoint"],
+            "keys": {"p256dh": row["p256dh"], "auth": row["auth"]},
+        }
+        try:
+            _send_push_raw(private_key, claims, sub, title, body, url, icon)
+        except WebPushException:
+            stale_ids.append(row["id"])
+
+    if stale_ids:
+        with global_db(config) as db:
+            for sid in stale_ids:
+                db.execute("DELETE FROM push_subscriptions WHERE id=?", (sid,))

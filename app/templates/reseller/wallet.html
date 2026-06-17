@@ -98,14 +98,18 @@
           <p class="td-muted" style="font-size:.85rem">Set up your payout profile above before you can withdraw.</p>
           {% else %}
           <p class="td-muted" style="font-size:.85rem;margin-bottom:1.25rem">
-            Funds are sent instantly to <strong>{{ user['momo_number'] }}</strong>
+            Funds are sent to <strong>{{ user['momo_number'] }}</strong>
             ({{ (user['momo_network'] or '')|upper }}).
-            Minimum withdrawal: GHS {{ '%.2f'|format(min_withdrawal / 100) }}.
+            Minimum: GHS {{ '%.2f'|format(min_withdrawal / 100) }}.
+            {% if withdrawal_fee_pct > 0 %}
+            A <strong>{{ withdrawal_fee_pct|int if withdrawal_fee_pct == withdrawal_fee_pct|int else withdrawal_fee_pct }}% fee</strong> applies.
+            {% endif %}
           </p>
           <form id="withdraw-form" novalidate>
+            <input type="hidden" id="wd-fee-pct" value="{{ withdrawal_fee_pct }}" />
             <div class="form-row wallet-form-row">
               <div class="field">
-                <label for="amount">Amount (GHS)</label>
+                <label for="amount">Amount to withdraw (GHS)</label>
                 <div class="input-with-icon">
                   <span class="input-icon input-icon-text">GHS</span>
                   <input type="number" id="amount" name="amount"
@@ -117,6 +121,19 @@
                 <span class="field-hint">Balance: GHS {{ '%.2f'|format(user['wallet_pesewas'] / 100) }}</span>
               </div>
             </div>
+
+            {% if withdrawal_fee_pct > 0 %}
+            <div id="wd-fee-preview" class="wd-fee-preview hidden">
+              <div class="wd-fee-row">
+                <span>Withdrawal fee ({{ withdrawal_fee_pct|int if withdrawal_fee_pct == withdrawal_fee_pct|int else withdrawal_fee_pct }}%)</span>
+                <span id="wd-fee-amount">—</span>
+              </div>
+              <div class="wd-fee-row wd-fee-row-total">
+                <span>You receive</span>
+                <span id="wd-payout-amount">—</span>
+              </div>
+            </div>
+            {% endif %}
 
             <div id="withdraw-error" class="form-error hidden"></div>
             <div id="withdraw-success" class="form-success hidden"></div>
@@ -141,8 +158,10 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Amount</th>
-                <th>Mobile number</th>
+                <th>Requested</th>
+                <th>Fee</th>
+                <th>Received</th>
+                <th>Mobile</th>
                 <th>Network</th>
                 <th>Status</th>
                 <th>Date</th>
@@ -150,8 +169,11 @@
             </thead>
             <tbody>
               {% for w in withdrawals %}
+              {% set fee = w.get('fee_pesewas') or 0 %}
               <tr>
                 <td class="td-bold">GHS {{ '%.2f'|format(w['amount_pesewas'] / 100) }}</td>
+                <td class="td-muted">{% if fee > 0 %}GHS {{ '%.2f'|format(fee / 100) }}{% else %}—{% endif %}</td>
+                <td class="td-bold" style="color:var(--green)">GHS {{ '%.2f'|format((w['amount_pesewas'] - fee) / 100) }}</td>
                 <td>{{ w['mobile_number'] }}</td>
                 <td><span class="net-badge net-{{ w['network'] }}">{{ (w['network'] or '')|upper }}</span></td>
                 <td><span class="status-pill status-{{ w['status'] }}">{{ w['status'] }}</span></td>

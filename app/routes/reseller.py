@@ -163,12 +163,17 @@ def wallet():
         min_row = db.execute(
             "SELECT value FROM app_settings WHERE key='min_withdrawal_pesewas'"
         ).fetchone()
+        fee_row = db.execute(
+            "SELECT value FROM app_settings WHERE key='withdrawal_fee_pct'"
+        ).fetchone()
         min_withdrawal = int(min_row["value"]) if min_row else 10000
+        withdrawal_fee_pct = float(fee_row["value"]) if fee_row else 0.0
 
     return render_template("reseller/wallet.html",
                            user=user, store=store,
                            withdrawals=[dict(r) for r in rows],
-                           min_withdrawal=min_withdrawal)
+                           min_withdrawal=min_withdrawal,
+                           withdrawal_fee_pct=withdrawal_fee_pct)
 
 
 @reseller_bp.route("/wallet/setup-payout", methods=["POST"])
@@ -225,7 +230,11 @@ def withdraw():
         min_row = db.execute(
             "SELECT value FROM app_settings WHERE key='min_withdrawal_pesewas'"
         ).fetchone()
+        fee_row = db.execute(
+            "SELECT value FROM app_settings WHERE key='withdrawal_fee_pct'"
+        ).fetchone()
         minimum = int(min_row["value"]) if min_row else 10000
+        fee_pct = float(fee_row["value"]) if fee_row else 0.0
 
         if not user["payout_recipient_code"]:
             return jsonify({"error": "Set up your payout profile first before withdrawing."}), 400
@@ -234,34 +243,38 @@ def withdraw():
         if amount_pesewas > user["wallet_pesewas"]:
             return jsonify({"error": "Insufficient wallet balance."}), 400
 
+        fee_pesewas = round(amount_pesewas * fee_pct / 100)
+        payout_pesewas = amount_pesewas - fee_pesewas
+
+        if payout_pesewas <= 0:
+            return jsonify({"error": "Amount too small after fee deduction."}), 400
+
         wd_id = str(uuid.uuid4())
         reference = f"WD-{wd_id[:8].upper()}"
 
-        # Deduct balance FIRST (defensive: prevents double-spend)
+        # Deduct full requested amount from reseller balance
         db.execute(
             "UPDATE users SET wallet_pesewas = wallet_pesewas - ? WHERE id=?",
             (amount_pesewas, uid)
         )
-        # Record the withdrawal as processing immediately
         db.execute(
             """INSERT INTO wallet_withdrawals
-               (id, user_id, amount_pesewas, mobile_number, network, status, paystack_transfer_code)
-               VALUES (?,?,?,?,?,'processing',?)""",
-            (wd_id, uid, amount_pesewas,
+               (id, user_id, amount_pesewas, fee_pesewas, mobile_number, network, status, paystack_transfer_code)
+               VALUES (?,?,?,?,?,?,'processing',?)""",
+            (wd_id, uid, amount_pesewas, fee_pesewas,
              user["momo_number"], user["momo_network"], reference)
         )
 
-    # Hit Paystack AFTER the DB commit — rollback on any failure
+    # Transfer only the net amount (after fee) via Paystack
     try:
         initiate_transfer(
             config["PAYSTACK_SECRET_KEY"],
-            amount_pesewas,
+            payout_pesewas,
             user["payout_recipient_code"],
             reference,
             reason="Mac Data Hub wallet withdrawal"
         )
     except Exception as exc:
-        # Rollback: refund the deducted balance and mark failed
         with global_db(config) as db:
             db.execute(
                 "UPDATE users SET wallet_pesewas = wallet_pesewas + ? WHERE id=?",
@@ -273,7 +286,11 @@ def withdraw():
             )
         return jsonify({"error": f"Transfer failed. Your balance has been restored. ({exc})"}), 502
 
-    return jsonify({"ok": True, "message": "Transfer initiated. Funds will arrive shortly."})
+    fee_msg = f" (fee: GHS {fee_pesewas/100:.2f})" if fee_pesewas else ""
+    return jsonify({
+        "ok": True,
+        "message": f"GHS {payout_pesewas/100:.2f} is on its way to {user['momo_number']}{fee_msg}."
+    })
 
 
 @reseller_bp.route("/store", methods=["GET", "POST"])
@@ -289,14 +306,15 @@ def store_settings():
         data = request.get_json()
         store_name = data.get("store_name", "").strip()
         description = data.get("description", "").strip()
+        support_whatsapp = data.get("support_whatsapp", "").strip()
 
         if not store_name:
             return jsonify({"error": "Store name is required."}), 400
 
         with global_db(config) as db:
             db.execute(
-                "UPDATE stores SET store_name=?, description=? WHERE id=?",
-                (store_name, description or None, store["id"])
+                "UPDATE stores SET store_name=?, description=?, support_whatsapp=? WHERE id=?",
+                (store_name, description or None, support_whatsapp or None, store["id"])
             )
         return jsonify({"ok": True})
 

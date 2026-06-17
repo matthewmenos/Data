@@ -495,26 +495,49 @@ def remove_site_logo():
 @admin_bp.route("/broadcast", methods=["POST"])
 @admin_required
 def broadcast():
-    """Send a push notification to all resellers."""
+    """Send a push notification to all active resellers who have subscriptions."""
+    from ..services.push import get_vapid_public_key, _send_push_raw, _get_or_create_vapid_keys
+    from pywebpush import WebPushException
+    import json
+
     config = current_app.config
-    data  = request.get_json()
+    data  = request.get_json() or {}
     title = (data.get("title") or "").strip()
     body  = (data.get("body")  or "").strip()
     if not title or not body:
         return jsonify({"ok": False, "error": "Title and message are required."}), 400
 
+    # Load VAPID keys once
+    private_key, _ = _get_or_create_vapid_keys(config)
+    app_url = config.get("APP_URL", "")
+    claims = {"sub": f"mailto:admin@{app_url.replace('https://', '').replace('http://', '').split('/')[0]}"}
+
+    # Fetch all subscriptions for active resellers in one query
     with global_db(config) as db:
-        reseller_ids = [
-            r["id"] for r in
-            db.execute("SELECT id FROM users WHERE role='reseller' AND is_active=1").fetchall()
-        ]
+        rows = db.execute(
+            """SELECT ps.id, ps.endpoint, ps.p256dh, ps.auth
+               FROM push_subscriptions ps
+               JOIN users u ON u.id = ps.user_id
+               WHERE u.role='reseller' AND u.is_active=1"""
+        ).fetchall()
+        subs = [dict(r) for r in rows]
 
     sent = 0
-    for uid in reseller_ids:
+    stale_ids = []
+    icon = "/static/icons/icon-192.svg"
+    for row in subs:
+        sub = {"endpoint": row["endpoint"], "keys": {"p256dh": row["p256dh"], "auth": row["auth"]}}
         try:
-            broadcast_push(config, uid, title, body, url="/dashboard")
+            _send_push_raw(private_key, claims, sub, title, body, "/dashboard", icon)
             sent += 1
+        except WebPushException:
+            stale_ids.append(row["id"])
         except Exception:
             pass
+
+    if stale_ids:
+        with global_db(config) as db:
+            for sid in stale_ids:
+                db.execute("DELETE FROM push_subscriptions WHERE id=?", (sid,))
 
     return jsonify({"ok": True, "sent_to": sent})

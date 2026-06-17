@@ -9,10 +9,12 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="https://api.paystack.co" />
+  <link rel="preload" href="/static/css/base.css" as="style" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
   <link rel="manifest" href="/static/manifest.json" />
-  <link rel="icon" href="/static/icons/icon-192.png" type="image/png" />
-  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+  <link rel="icon" href="/static/icons/icon-192.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.svg" />
   <link rel="stylesheet" href="/static/css/base.css" />
   {% block head %}{% endblock %}
   <script>
@@ -144,8 +146,34 @@
   {% block scripts %}{% endblock %}
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available — silent update, will activate on next navigation
+              sw.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+      });
+      // Reload once after SW controller changes (new version activated)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
     }
+    // Handle ?action=track shortcut from manifest
+    (function() {
+      const p = new URLSearchParams(location.search);
+      if (p.get('action') === 'track') {
+        window.addEventListener('DOMContentLoaded', () => {
+          const btn = document.getElementById('help-fab-btn');
+          if (btn) { setTimeout(() => { openHelpChooser && openHelpChooser(); }, 400); }
+        });
+      }
+    })();
   </script>
 </body>
 </html>

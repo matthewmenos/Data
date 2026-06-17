@@ -44,6 +44,14 @@
             </div>
 
             <div class="field">
+              <label for="support_whatsapp">WhatsApp support number <span class="label-required">optional</span></label>
+              <input type="tel" id="support_whatsapp" name="support_whatsapp"
+                     value="{{ store['support_whatsapp'] or '' }}"
+                     placeholder="e.g. 0549128384" maxlength="15" />
+              <span class="field-hint">Customers can tap "Chat Support" to message you directly on WhatsApp.</span>
+            </div>
+
+            <div class="field">
               <label>Your store link</label>
               <div class="input-copy-wrap">
                 <input type="text" readonly id="store-url"

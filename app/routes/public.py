@@ -19,6 +19,11 @@ def service_worker():
     return resp
 
 
+@public_bp.route("/offline")
+def offline():
+    return render_template("public/offline.html"), 200
+
+
 @public_bp.route("/")
 def home():
     config = current_app.config
@@ -27,7 +32,9 @@ def home():
             "SELECT * FROM data_bundles WHERE is_active=1 ORDER BY network, volume_mb"
         ).fetchall()
         settings = {r["key"]: r["value"] for r in db.execute("SELECT key, value FROM app_settings").fetchall()}
-    return render_template("public/home.html", bundles=bundles, settings=settings)
+    support_whatsapp = settings.get("support_whatsapp", "")
+    return render_template("public/home.html", bundles=bundles, settings=settings,
+                           support_whatsapp=support_whatsapp)
 
 
 @public_bp.route("/s/<slug>")
@@ -47,7 +54,8 @@ def storefront(slug):
                ORDER BY db.network, db.volume_mb""",
             (store["id"],)
         ).fetchall()
-    return render_template("public/storefront.html", store=store, pricing=pricing)
+    return render_template("public/storefront.html", store=store, pricing=pricing,
+                           support_whatsapp=store["support_whatsapp"] if store["support_whatsapp"] else "")
 
 
 @public_bp.route("/checkout", methods=["GET", "POST"])

@@ -131,6 +131,16 @@
               </div>
               <span class="field-hint">Minimum amount a reseller can withdraw at once.</span>
             </div>
+            <div class="field">
+              <label for="withdrawal-fee-pct">Withdrawal fee (%)</label>
+              <div class="input-with-icon">
+                <span class="input-icon input-icon-text">%</span>
+                <input type="number" id="withdrawal-fee-pct" name="withdrawal_fee_pct"
+                       value="{{ settings.get('withdrawal_fee_pct', '0') }}"
+                       min="0" max="50" step="0.1" />
+              </div>
+              <span class="field-hint">Percentage deducted from each withdrawal. Set to 0 for no fee. Example: 5 = 5% fee.</span>
+            </div>
           </div>
         </div>
 
@@ -213,6 +223,13 @@
                      value="{{ settings.get('whatsapp_channel_url', '') }}"
                      placeholder="https://whatsapp.com/channel/…" />
               <span class="field-hint">Shown in the reseller and guest sidebar so users can join your channel.</span>
+            </div>
+            <div class="field">
+              <label for="support_whatsapp">Support WhatsApp number</label>
+              <input type="tel" id="support_whatsapp" name="support_whatsapp"
+                     value="{{ settings.get('support_whatsapp', '') }}"
+                     placeholder="e.g. 0549128384" maxlength="15" />
+              <span class="field-hint">Shown as "Chat Support" in the help button on the direct store for guests.</span>
             </div>
           </div>
         </div>

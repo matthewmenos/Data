@@ -59,13 +59,33 @@ function showPayoutForm() {
   const errEl     = document.getElementById('withdraw-error');
   const successEl = document.getElementById('withdraw-success');
   const wdBtn     = document.getElementById('withdraw-btn');
+  const amountEl  = document.getElementById('amount');
+  const feePctEl  = document.getElementById('wd-fee-pct');
+  const feePreview  = document.getElementById('wd-fee-preview');
+  const feeAmountEl = document.getElementById('wd-fee-amount');
+  const payoutEl    = document.getElementById('wd-payout-amount');
+
+  const feePct = feePctEl ? parseFloat(feePctEl.value) || 0 : 0;
+
+  function updateFeePreview() {
+    if (!feePreview || feePct <= 0) return;
+    const ghs = parseFloat(amountEl.value) || 0;
+    if (ghs <= 0) { feePreview.classList.add('hidden'); return; }
+    const fee    = Math.round(ghs * 100 * feePct / 100) / 100;
+    const payout = Math.max(0, ghs - fee);
+    feeAmountEl.textContent = 'GHS ' + fee.toFixed(2);
+    payoutEl.textContent    = 'GHS ' + payout.toFixed(2);
+    feePreview.classList.remove('hidden');
+  }
+
+  if (amountEl) amountEl.addEventListener('input', updateFeePreview);
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
     errEl.classList.add('hidden');
     successEl.classList.add('hidden');
 
-    const ghs = parseFloat(document.getElementById('amount').value) || 0;
+    const ghs = parseFloat(amountEl.value) || 0;
     if (ghs <= 0) {
       errEl.textContent = 'Enter a valid amount.';
       errEl.classList.remove('hidden');
@@ -86,6 +106,7 @@ function showPayoutForm() {
       successEl.textContent = data.message || 'Transfer initiated. Funds will arrive shortly.';
       successEl.classList.remove('hidden');
       form.reset();
+      if (feePreview) feePreview.classList.add('hidden');
       setTimeout(() => location.reload(), 2500);
     } catch (err) {
       errEl.textContent = err.message;
