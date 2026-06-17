@@ -430,17 +430,19 @@ document.getElementById('broadcast-form').addEventListener('submit', async funct
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({title, body})
     });
-    var data = await res.json();
-    if (data.ok) {
+    var data;
+    try { data = await res.json(); } catch(_) { data = {}; }
+    if (res.ok && data.ok) {
+      ok.textContent = 'Broadcast sent to ' + (data.sent_to || 0) + ' subscriber(s).';
       ok.classList.remove('hidden');
       document.getElementById('bc-title').value = '';
       document.getElementById('bc-body').value  = '';
     } else {
-      err.textContent = data.error || 'Failed to send broadcast.';
+      err.textContent = data.error || ('Server error ' + res.status + '. Check server logs.');
       err.classList.remove('hidden');
     }
   } catch(ex) {
-    err.textContent = 'Network error. Please try again.';
+    err.textContent = 'Network error: ' + ex.message;
     err.classList.remove('hidden');
   } finally {
     btn.disabled = false;
