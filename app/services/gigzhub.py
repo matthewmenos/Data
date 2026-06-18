@@ -26,6 +26,18 @@ def _headers(api_key: str) -> dict:
     return {"x-api-key": api_key, "Content-Type": "application/json"}
 
 
+def get_balance(api_key: str) -> dict:
+    """Return GigzHub wallet balance. Returns {"balance": float, "currency": str}."""
+    resp = requests.get(f"{_base()}/balance",
+                        headers=_headers(api_key), timeout=10)
+    if not resp.ok:
+        raise ValueError(f"GigzHub returned HTTP {resp.status_code}: {resp.text[:200]}")
+    try:
+        return resp.json()
+    except Exception:
+        raise ValueError(f"GigzHub returned non-JSON: {resp.text[:200]}")
+
+
 def get_offers(api_key: str) -> list:
     resp = requests.get(f"{_base()}/offers",
                         headers=_headers(api_key), timeout=15)

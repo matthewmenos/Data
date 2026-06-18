@@ -68,6 +68,17 @@
           <a href="/admin/bundles" class="stat-card-trend" style="color:var(--green)">Manage →</a>
         </div>
 
+        <div class="stat-card" id="gigzhub-balance-card">
+          <div class="stat-card-header">
+            <span class="stat-card-label">GigzHub Balance</span>
+            <div class="stat-card-icon" style="background:#f0fdf4">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+            </div>
+          </div>
+          <div class="stat-card-value" id="gigzhub-balance-val">—</div>
+          <div class="stat-card-trend" id="gigzhub-balance-trend">Fetching…</div>
+        </div>
+
         {% if pending_orders > 0 %}
         <div class="stat-card stat-card-alert">
           <div class="stat-card-header">
@@ -261,4 +272,34 @@
 
 {% block scripts %}
 <script src="/static/js/admin_withdrawals.js"></script>
+<script>
+(function() {
+  fetch('/admin/gigzhub-balance')
+    .then(r => r.json())
+    .then(function(res) {
+      var val   = document.getElementById('gigzhub-balance-val');
+      var trend = document.getElementById('gigzhub-balance-trend');
+      if (res.ok && res.data) {
+        var d = res.data;
+        var bal = d.balance !== undefined ? d.balance : (d.data && d.data.balance);
+        var cur = d.currency || (d.data && d.data.currency) || '';
+        if (bal !== undefined) {
+          val.textContent   = cur + ' ' + parseFloat(bal).toFixed(2);
+          trend.textContent = 'GigzHub wallet';
+        } else {
+          val.textContent   = 'GHS —';
+          trend.textContent = 'Unexpected response';
+        }
+      } else {
+        val.textContent   = 'Error';
+        trend.textContent = res.error || 'Could not fetch balance';
+        trend.style.color = 'var(--red, #dc2626)';
+      }
+    })
+    .catch(function() {
+      document.getElementById('gigzhub-balance-val').textContent   = 'Error';
+      document.getElementById('gigzhub-balance-trend').textContent = 'Network error';
+    });
+})();
+</script>
 {% endblock %}

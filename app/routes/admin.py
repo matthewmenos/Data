@@ -5,7 +5,7 @@ from flask import (Blueprint, render_template, request, redirect,
 from ..services.db import global_db
 from ..services.push import broadcast_push
 from ..services.storage import upload_asset, delete_asset
-from ..services.gigzhub import get_offers
+from ..services.gigzhub import get_offers, get_balance as gigzhub_get_balance
 from ..services.paystack import create_transfer_recipient, initiate_transfer
 
 ALLOWED_LOGO_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
@@ -91,6 +91,18 @@ def dashboard():
                            recent_orders=recent_orders,
                            recent_withdrawals=recent_withdrawals,
                            net_revenue=net_revenue)
+
+
+@admin_bp.route("/gigzhub-balance")
+@admin_required
+def gigzhub_balance():
+    """Return GigzHub wallet balance as JSON for the dashboard stat card."""
+    config = current_app.config
+    try:
+        data = gigzhub_get_balance(config["GIGZHUB_API_KEY"])
+        return jsonify({"ok": True, "data": data})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 502
 
 
 @admin_bp.route("/notifications")

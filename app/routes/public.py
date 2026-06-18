@@ -2,7 +2,7 @@ import uuid
 from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, send_from_directory
 import os
 from ..services.db import global_db, user_db
-from ..services.paystack import initialize_transaction, verify_transaction
+from ..services.paystack import initialize_transaction, verify_transaction, add_paystack_charge
 from ..services.gigzhub import dispatch_bundle
 from ..services.push import broadcast_push
 
@@ -79,7 +79,9 @@ def checkout():
             price = price_row["price_pesewas"]
         else:
             price = bundle["base_price_pesewas"] if store else (bundle["guest_price_pesewas"] or bundle["base_price_pesewas"])
-        return render_template("public/checkout.html", bundle=bundle, store=store, price=price)
+        charge, fee = add_paystack_charge(price)
+        return render_template("public/checkout.html", bundle=bundle, store=store,
+                               price=price, fee_pesewas=fee, charge_pesewas=charge)
 
     # POST: initiate Paystack payment
     data = request.get_json()
@@ -109,6 +111,8 @@ def checkout():
         profit = price - bundle["base_price_pesewas"] if store else 0
         order_id = str(uuid.uuid4())
         reference = f"MDH-{order_id[:8].upper()}"
+        # Customer pays price + Paystack fee so seller receives full price
+        charge_pesewas, fee_pesewas = add_paystack_charge(price)
 
         db.execute(
             """INSERT INTO orders
@@ -123,11 +127,12 @@ def checkout():
 
     callback_url = f"{config['APP_URL']}/checkout/verify?ref={reference}"
     result = initialize_transaction(
-        config["PAYSTACK_SECRET_KEY"], email, price, reference, callback_url,
+        config["PAYSTACK_SECRET_KEY"], email, charge_pesewas, reference, callback_url,
         metadata={"order_id": order_id, "phone": phone}
     )
     return jsonify({"authorization_url": result["data"]["authorization_url"],
-                    "reference": reference})
+                    "reference": reference,
+                    "fee_pesewas": fee_pesewas})
 
 
 @public_bp.route("/track")

@@ -13,6 +13,18 @@ def _headers(secret_key: str) -> dict:
     }
 
 
+def add_paystack_charge(amount_pesewas: int) -> tuple[int, int]:
+    """
+    Return (total_pesewas_to_charge, fee_pesewas) so the seller receives amount_pesewas
+    after Paystack deducts its fee (1.5% + GHS 0.50, fee capped at GHS 2.00).
+    """
+    # Paystack fee in pesewas: 1.5% + 50p, capped at 200p
+    fee = round(amount_pesewas * 0.015) + 50
+    fee = min(fee, 200)
+    total = amount_pesewas + fee
+    return total, fee
+
+
 def initialize_transaction(secret_key: str, email: str, amount_pesewas: int,
                             reference: str, callback_url: str,
                             metadata: dict = None) -> dict:
