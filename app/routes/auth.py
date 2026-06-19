@@ -1,9 +1,12 @@
+import re
 import uuid
 from flask import (Blueprint, render_template, request, redirect,
                    url_for, session, flash, current_app, jsonify)
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..services.db import global_db, global_db_read
 from ..services.paystack import initialize_transaction
+
+_USERNAME_RE = re.compile(r'^[a-z0-9_-]{3,30}$')
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -13,25 +16,26 @@ def login():
     if request.method == "GET":
         return render_template("auth/login.html")
 
-    email = request.form.get("email", "").strip().lower()
+    identifier = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "")
     config = current_app.config
 
     # Admin is env-only
-    if email == config["ADMIN_EMAIL"].lower() and password == config["ADMIN_PASSWORD"]:
+    if identifier == config["ADMIN_EMAIL"].lower() and password == config["ADMIN_PASSWORD"]:
         session.clear()
         session["user_id"] = "admin"
         session["role"] = "admin"
-        session["email"] = email
+        session["email"] = identifier
         return redirect(url_for("admin.dashboard"))
 
     with global_db_read(config) as db:
         user = db.execute(
-            "SELECT * FROM users WHERE email=? AND is_active=1", (email,)
+            "SELECT * FROM users WHERE (email=? OR username=?) AND is_active=1",
+            (identifier, identifier)
         ).fetchone()
 
     if not user or not check_password_hash(user["password_hash"], password):
-        flash("Invalid email or password.", "error")
+        flash("Invalid email/username or password.", "error")
         return render_template("auth/login.html")
 
     session.clear()
@@ -76,10 +80,14 @@ def register():
     password   = data.get("password", "")
     full_name  = data.get("full_name", "").strip()
     phone      = data.get("phone", "").strip()
+    username   = data.get("username", "").strip().lower()
     slug       = data.get("slug", "").strip().lower().replace(" ", "-")
 
-    if not all([email, password, full_name, phone, slug]):
+    if not all([email, password, full_name, phone, username, slug]):
         return jsonify({"error": "All fields are required."}), 400
+
+    if not _USERNAME_RE.match(username):
+        return jsonify({"error": "Username must be 3–30 characters: letters, numbers, hyphens, underscores only."}), 400
 
     if len(password) < 8:
         return jsonify({"error": "Password must be at least 8 characters."}), 400
@@ -87,6 +95,9 @@ def register():
     with global_db(config) as db:
         if db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone():
             return jsonify({"error": "Email already registered."}), 400
+
+        if db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone():
+            return jsonify({"error": "Username already taken."}), 400
 
         if db.execute("SELECT id FROM stores WHERE slug=?", (slug,)).fetchone():
             return jsonify({"error": "Store URL is already taken."}), 400
@@ -106,9 +117,9 @@ def register():
         if is_free:
             # Activate immediately — no payment needed
             db.execute(
-                """INSERT INTO users (id, email, password_hash, full_name, phone, role, is_active)
-                   VALUES (?,?,?,?,?,'reseller',1)""",
-                (user_id, email, generate_password_hash(password), full_name, phone)
+                """INSERT INTO users (id, email, password_hash, full_name, phone, username, role, is_active)
+                   VALUES (?,?,?,?,?,?,'reseller',1)""",
+                (user_id, email, generate_password_hash(password), full_name, phone, username)
             )
             db.execute(
                 "INSERT INTO stores (id, user_id, slug, store_name) VALUES (?,?,?,?)",
@@ -120,9 +131,9 @@ def register():
         reg_id    = str(uuid.uuid4())
         reference = f"REG-{reg_id[:8].upper()}"
         db.execute(
-            """INSERT INTO users (id, email, password_hash, full_name, phone, role, is_active)
-               VALUES (?,?,?,?,?,'reseller',0)""",
-            (user_id, email, generate_password_hash(password), full_name, phone)
+            """INSERT INTO users (id, email, password_hash, full_name, phone, username, role, is_active)
+               VALUES (?,?,?,?,?,?,'reseller',0)""",
+            (user_id, email, generate_password_hash(password), full_name, phone, username)
         )
         db.execute(
             """INSERT INTO reseller_registrations

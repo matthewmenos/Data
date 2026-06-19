@@ -125,6 +125,17 @@
         </div>
 
         <div class="field">
+          <label for="username">Username</label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">@</span>
+            <input type="text" id="username" name="username" placeholder="kwame_data"
+                   required pattern="[a-z0-9_\-]{3,30}" autocomplete="username"
+                   oninput="this.value=this.value.toLowerCase()" />
+          </div>
+          <span class="field-hint">3–30 characters: letters, numbers, hyphens, underscores. Used to log in.</span>
+        </div>
+
+        <div class="field">
           <label for="slug">Your store URL</label>
           <div class="input-prefix-wrap">
             <span class="input-prefix">macdatahub.com/s/</span>

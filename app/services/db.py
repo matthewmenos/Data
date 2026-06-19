@@ -76,6 +76,8 @@ _MIGRATIONS = [
     "ALTER TABLE stores ADD COLUMN support_whatsapp TEXT",
     # Withdrawal fee charged by admin (stored on the withdrawal record)
     "ALTER TABLE wallet_withdrawals ADD COLUMN fee_pesewas INTEGER NOT NULL DEFAULT 0",
+    # Reseller username for login and display (unique, nullable for existing accounts)
+    "ALTER TABLE users ADD COLUMN username TEXT",
 ]
 
 

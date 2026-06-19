@@ -6,7 +6,7 @@ from ..services.db import global_db, global_db_read, user_db, user_db_read
 from ..services.storage import upload_asset, delete_asset
 from ..services.paystack import create_transfer_recipient, initiate_transfer, resolve_account
 
-MOMO_BANK_CODES = {"mtn": "MTN", "telecel": "VDF", "airteltigo": "ATL"}
+MOMO_BANK_CODES = {"mtn": "MTN", "telecel": "VOD", "airteltigo": "ATL"}
 
 ALLOWED_LOGO_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_LOGO_BYTES = 2 * 1024 * 1024  # 2 MB

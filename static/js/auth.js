@@ -27,6 +27,13 @@ function togglePw(id, btn) {
       return;
     }
 
+    var username = document.getElementById('username').value.trim().toLowerCase();
+    if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
+      errEl.textContent = 'Username must be 3–30 characters: letters, numbers, hyphens, underscores only.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
     var slug = document.getElementById('slug').value.trim();
     if (!/^[a-z0-9-]+$/.test(slug)) {
       errEl.textContent = 'Store URL can only contain lowercase letters, numbers and hyphens.';
@@ -45,6 +52,7 @@ function togglePw(id, btn) {
           full_name: document.getElementById('full_name').value.trim(),
           phone:     document.getElementById('phone').value.trim(),
           email:     document.getElementById('email').value.trim(),
+          username:  username,
           slug:      slug,
           password:  password,
         }),

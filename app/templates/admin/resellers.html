@@ -134,6 +134,7 @@
     <!-- Account -->
     <div class="pd-section">
       <div class="pd-section-label">Account</div>
+      <div class="pd-row"><span class="pd-key">Username</span><span class="pd-val" id="pd-username"></span></div>
       <div class="pd-row"><span class="pd-key">Email</span><span class="pd-val" id="pd-email"></span></div>
       <div class="pd-row"><span class="pd-key">Phone</span><span class="pd-val" id="pd-phone"></span></div>
       <div class="pd-row"><span class="pd-key">Status</span><span class="pd-val" id="pd-status"></span></div>
@@ -186,8 +187,9 @@
   const NETWORKS = { mtn: 'MTN Mobile Money', telecel: 'Telecel Cash', airteltigo: 'AirtelTigo Money' };
 
   function openProfile(r) {
-    document.getElementById('pd-name').textContent    = r.full_name || '—';
-    document.getElementById('pd-email').textContent   = r.email || '—';
+    document.getElementById('pd-name').textContent     = r.full_name || '—';
+    document.getElementById('pd-username').textContent = r.username ? '@' + r.username : '—';
+    document.getElementById('pd-email').textContent    = r.email || '—';
     document.getElementById('pd-phone').textContent   = r.phone || '—';
     document.getElementById('pd-joined').textContent  = (r.created_at || '').slice(0, 10) || '—';
     document.getElementById('pd-wallet').textContent  = 'GHS ' + ((r.wallet_pesewas || 0) / 100).toFixed(2);
