@@ -9,6 +9,31 @@ from ..services.push import broadcast_push
 public_bp = Blueprint("public", __name__)
 
 
+@public_bp.route("/.well-known/assetlinks.json")
+def assetlinks():
+    """Digital Asset Links — required for TWA to run without browser chrome."""
+    # Replace SHA256_FINGERPRINT with the value from: bubblewrap fingerprint list
+    data = [
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "com.macdatahubgh.app",
+                "sha256_cert_fingerprints": [
+                    "D3:33:1D:4D:2C:4A:F1:89:92:13:5D:0F:28:0E:F9:18:27:E8:62:43:88:50:5E:5B:42:05:70:5F:34:36:E8:00"
+                ]
+            }
+        }
+    ]
+    from flask import json
+    resp = current_app.response_class(
+        json.dumps(data, indent=2),
+        mimetype="application/json"
+    )
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 @public_bp.route("/sw.js")
 def service_worker():
     """Serve SW from root so it has scope over the whole origin."""
