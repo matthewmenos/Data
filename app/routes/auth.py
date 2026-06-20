@@ -83,8 +83,11 @@ def register():
     username   = data.get("username", "").strip().lower()
     slug       = data.get("slug", "").strip().lower().replace(" ", "-")
 
-    if not all([email, password, full_name, phone, username, slug]):
-        return jsonify({"error": "All fields are required."}), 400
+    missing = [f for f, v in [("full name", full_name), ("phone", phone),
+               ("email", email), ("username", username), ("store URL", slug),
+               ("password", password)] if not v]
+    if missing:
+        return jsonify({"error": f"Missing: {', '.join(missing)}."}), 400
 
     if not _USERNAME_RE.match(username):
         return jsonify({"error": "Username must be 3–30 characters: letters, numbers, hyphens, underscores only."}), 400
